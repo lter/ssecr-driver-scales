@@ -10,7 +10,9 @@ Investigators:
 
 ## Project Description
 
-__Question: Are the effects of environmental drivers consistent across ecological scales.__ We propose determining how changes in multiple environental variables over time affect infividual traits, population growth rates, and biodiversity indices. We will determine whether these effects across ecological scales are consistent or whether effects become amplified or reduced as the scales increase from individuals to populations to communities. 
+__Question: Are the effects of environmental drivers consistent across ecological scales?__ We propose determining how changes in multiple environmental variables over time affect individual traits, population growth rates, and biodiversity indices. We will determine whether these effects across ecological scales are consistent or whether effects become amplified or reduced as the scales increase from individuals to populations to communities. 
+
+<img src="conceptual fig.png" alt="Project conceptual figure" width="100%"/>
 
 ## Script Explanations
 

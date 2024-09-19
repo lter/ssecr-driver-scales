@@ -7,6 +7,8 @@ Investigators (listed alphabetically):
 - Sierra B. Perez
 - Bethany L. Williams
 
+Official group name in progress! 
+
 ## Script Explanations
 
 Briefly describe the purpose of each script (or folder of scripts) here as you create them!

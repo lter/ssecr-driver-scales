@@ -1,6 +1,6 @@
 ## Effects of Environmental Drivers Across Ecological Scales
 
-Investigators:
+Investigators (listed alphabetically):
 - Allison Case
 - Jeremy A. Collings
 - Evald Maceno

@@ -3,6 +3,7 @@
 Investigators (listed alphabetically):
 - Allison Case
 - Jeremy A. Collings
+- Joey Krieger Lodge
 - Evald Maceno
 - Sierra B. Perez
 - Bethany L. Williams

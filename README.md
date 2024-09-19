@@ -1,7 +1,7 @@
 # GROUP NAME HERE
 
-Principal Investigators:
-- PI NAME HERE
+Investigators:
+- YOUR NAME HERE
 
 ## Script Explanations
 

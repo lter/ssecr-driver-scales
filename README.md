@@ -1,6 +1,6 @@
 ## Effects of Environmental Drivers Across Ecological Scales
 
-Investigators (listed alphabetically):
+Investigators:
 - Allison Case
 - Jeremy A. Collings
 - Joey Krieger Lodge
@@ -8,7 +8,9 @@ Investigators (listed alphabetically):
 - Sierra B. Perez
 - Bethany L. Williams
 
-Official group name in progress! 
+## Project Description
+
+__Question: Are the effects of environmental drivers consistent across ecological scales.__ We propose determining how changes in multiple environental variables over time affect infividual traits, population growth rates, and biodiversity indices. We will determine whether these effects across ecological scales are consistent or whether effects become amplified or reduced as the scales increase from individuals to populations to communities. 
 
 ## Script Explanations
 

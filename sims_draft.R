@@ -8,7 +8,7 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
          beta_mean = 0, beta_sd = 1,
          alpha.sd = 0.01, ind_sd = .1, 
          p1 = 1, p2 = 1, burnin = 50, 
-         model = TRUE, plot = FALSE){
+         model = TRUE, plot = TRUE){
   # S = number of species; Ti = length of time series; 
   # N0 = starting population sizes; NI = number of individuals samples yearly;
   # dd = density-dependence; # iv = individual-level variation in climate responses; 
@@ -92,17 +92,24 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   pop_dat$clim <- clim[pop_dat$time]
   
   div_dat <- cbind.data.frame(div = apply(com_dat, 2, diversity)[-1], 
-                              time = 1:Ti)
+                              time = 1:Ti, 
+                              tot = apply(com_dat, 2, sum)[-1])
   div_dat$clim <- clim[div_dat$time]
   
   if(model){
     mod.ind <- lme4::lmer(scale(fit) ~ clim + (clim|sp), data = fit_dat)
     mod.pop <- lme4::lmer(scale(size) ~ clim + (clim|sp), data = pop_dat)
-    mod.com <- lm(scale(div) ~ clim, data = div_dat)
-    print("real", beta)
-    print("individual", coefficients(mod.ind))
-    print("population", coefficients(mod.pop))
-    print("community", coefficients(mod.com))
+    mod.div <- lm(scale(div) ~ clim, data = div_dat)
+    mod.tot <- lm(scale(tot) ~ clim, data = div_dat)
+    
+    print("Individual & Population Estimates")
+    print(cbind.data.frame(real_effects = beta, 
+                           ind_estimates = coefficients(mod.ind)[[1]][,2],
+                           pop_estimates = coefficients(mod.pop)[[1]][,2]))
+    print("Community Estimates")
+    print(cbind.data.frame(div = coefficients(mod.div)[2], 
+                           tot = coefficients(mod.tot)[2]))
+    
   }
   
   if(plot){
@@ -125,19 +132,20 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
       theme_classic(base_size = 15) + 
       xlab("Climate Variable") + ylab("Shannon Diversity")
     print(p3)
+    
+    p4 <- ggplot(div_dat, aes(x = clim, y = tot)) + 
+      geom_point() +
+      theme_classic(base_size = 15) + 
+      xlab("Climate Variable") + ylab("Total Count")
+    print(p4)
   }
 }
 
-sim_fun(plot = TRUE, model = FALSE, 
-        beta_mean = -5, beta_sd = 1)
-
-sim_fun(plot = TRUE, model = FALSE, 
-        beta_mean = -5, beta_sd = 2.5)
-
-sim_fun(plot = TRUE, model = FALSE, 
-        beta_mean = -5, beta_sd = 5)
-
-sim_fun(plot = TRUE, model = FALSE, 
-        beta_mean = -5, beta_sd = 10)
+set.seed(6)
+# what does increasing the variation in population-level responses do to inference?
+sim_fun(beta_mean = -2.5, beta_sd = 1)
+sim_fun(beta_mean = -2.5, beta_sd = 2.5)
+sim_fun(beta_mean = -2.5, beta_sd = 5)
+sim_fun(beta_mean = -2.5, beta_sd = 10)
 
 

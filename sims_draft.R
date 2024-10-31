@@ -3,7 +3,7 @@
 # Jeremy Collings, October 2024
 
 sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20, 
-         dd = FALSE, iv = FALSE,
+         dd = FALSE, iv = FALSE, disp = 1,
          beta0_mean = 50, beta0_sd = 20, 
          beta_mean = 0, beta_sd = 1,
          alpha.sd = 0.01, ind_sd = .1, 
@@ -12,6 +12,7 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   # S = number of species; Ti = length of time series; 
   # N0 = starting population sizes; NI = number of individuals samples yearly;
   # dd = density-dependence; # iv = individual-level variation in climate responses; 
+  # disp = dispersion parameter for negative binomial of pop size;
   # beta0_mean = mean population-level baseline performance; 
   # beta0_sd = standard deviation of population-level baseline performances;
   # beta_mean = mean population-level climate responses; 
@@ -60,20 +61,20 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
         if(iv){
           fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*
                                         rnorm(1, beta[s], ind_sd))/
-                           (1 + Ns[s]*alpha[s]), size = S)
+                           (1 + Ns[s]*alpha[s]), size = disp)
         }
         else{
           fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*beta[s])/
-                           (1 + Ns[s]*alpha[s]), size = S)
+                           (1 + Ns[s]*alpha[s]), size = disp)
         }
       }
       else{
         if(iv){
           fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*
-                                        rnorm(1, beta[s], ind_sd), size = S)
+                                        rnorm(1, beta[s], ind_sd), size = disp)
         }
         else{
-          fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*beta[s], size = S)
+          fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*beta[s], size = disp)
         }
       }
       com_dat[s,i+1] <- rbinom(1, sum(fit), ps[s])

@@ -3,8 +3,8 @@
 # Jeremy Collings, October 2024
 
 sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20, 
-         dd = FALSE, iv = FALSE, disp = 1,
-         beta0_mean = 50, beta0_sd = 20, 
+         dd = FALSE, iv = FALSE, mind = FALSE, 
+         disp = 1, beta0_mean = 50, beta0_sd = 20, 
          beta_mean = 0, beta_sd = 1,
          alpha.sd = 0.01, ind_sd = .1, 
          p1 = 1, p2 = 1, burnin = 50, 
@@ -12,6 +12,7 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   # S = number of species; Ti = length of time series; 
   # N0 = starting population sizes; NI = number of individuals samples yearly;
   # dd = density-dependence; # iv = individual-level variation in climate responses; 
+  # mind = marked individuals;
   # disp = dispersion parameter for negative binomial of pop size;
   # beta0_mean = mean population-level baseline performance; 
   # beta0_sd = standard deviation of population-level baseline performances;
@@ -23,6 +24,8 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   # burnin = length of burn in
   # model = report parameter estimates
   # plot = report figures
+  
+  if(mind & !iv) stop("Cannot mark individuals if there is no individual variation.")
   
   if(dd){
     # generate vector of self limitation terms
@@ -55,13 +58,31 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   ind_dat <- array(dim = c(S, Ti, NI)) # create an empty array for individual level measurements
   clim <- rnorm(Ti) # create climate data
   
+  if(mind){
+    ind_eff <- matrix(NA, nrow = NI, ncol = S)
+    for(i in 1:S){
+      ind_eff[,i] <- rnorm(NI, beta[i], ind_sd)
+    }
+  }
+  
   for(i in 1:Ti){
     for(s in 1:S){
       if(dd){
         if(iv){
-          fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*
-                                        rnorm(1, beta[s], ind_sd))/
-                           (1 + Ns[s]*alpha[s]), size = disp)
+          if(mind){
+            fit <- rnbinom(Ns[s] - NI, mu = (lambda0[s] + clim[i]*
+                                          rnorm(1, beta[s], ind_sd))/
+                             (1 + Ns[s]*alpha[s]), size = disp) 
+            ind_dat[s,i,] <- rnbinom(NI, mu = (lambda0[s] + clim[i]*
+                                            ind_eff[,s])/
+                                       (1 + Ns[s]*alpha[s]), size = disp)
+            fit <- c(fit, ind_dat[s,i,])
+          }
+          else{
+            fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*
+                                          rnorm(1, beta[s], ind_sd))/
+                             (1 + Ns[s]*alpha[s]), size = disp)             
+          }
         }
         else{
           fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*beta[s])/
@@ -70,15 +91,24 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
       }
       else{
         if(iv){
-          fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*
-                                        rnorm(1, beta[s], ind_sd), size = disp)
+          if(mind){
+            fit <- rnbinom(Ns[s] - NI, mu = (lambda0[s] + clim[i]*
+                                               rnorm(1, beta[s], ind_sd)), size = disp) 
+            ind_dat[s,i,] <- rnbinom(NI, mu = (lambda0[s] + clim[i]*
+                                            ind_eff[,s]), size = disp)
+            fit <- c(fit, ind_dat[s,i,])
+          }
+          else{
+            fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*
+                             rnorm(1, beta[s], ind_sd), size = disp)
+          }
         }
         else{
           fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*beta[s], size = disp)
         }
       }
       com_dat[s,i+1] <- rbinom(1, sum(fit), ps[s])
-      ind_dat[s,i,] <- sample(fit, NI)
+      if(!mind) ind_dat[s,i,] <- sample(fit, NI)
     }
   }
   
@@ -86,6 +116,7 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
                               sp = rep(1:S, NI*Ti), 
                               time = rep(rep(1:Ti, each = S), NI))
   fit_dat$clim <- clim[fit_dat$time]
+  if(mind) fit_dat$ind <- paste("sp", fit_dat$sp, "ind", rep(1:NI, each = S*Ti), sep = "")
   
   pop_dat <- cbind.data.frame(size = c(com_dat[,-1]), 
                               sp = rep(1:S, Ti), 
@@ -98,15 +129,21 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   div_dat$clim <- clim[div_dat$time]
   
   if(model){
-    mod.ind <- lme4::lmer(scale(fit) ~ clim + (clim|sp), data = fit_dat)
+    if(mind){
+      mod.ind <- lme4::lmer(scale(fit) ~ clim + (clim|sp/ind), data = fit_dat)
+    }
+    else{
+      mod.ind <- lme4::lmer(scale(fit) ~ clim + (clim|sp), data = fit_dat)
+    }
+    
     mod.pop <- lme4::lmer(scale(size) ~ clim + (clim|sp), data = pop_dat)
     mod.div <- lm(scale(div) ~ clim, data = div_dat)
     mod.tot <- lm(scale(tot) ~ clim, data = div_dat)
     
     print("Individual & Population Estimates")
     print(cbind.data.frame(real_effects = beta, 
-                           ind_estimates = coefficients(mod.ind)[[1]][,2],
-                           pop_estimates = coefficients(mod.pop)[[1]][,2]))
+                           ind_estimates = coefficients(mod.ind)[["sp"]][,2],
+                           pop_estimates = coefficients(mod.pop)[["sp"]][,2]))
     print("Community Estimates")
     print(cbind.data.frame(div = coefficients(mod.div)[2], 
                            tot = coefficients(mod.tot)[2]))
@@ -114,15 +151,26 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   }
   
   if(plot){
-    p1 <- ggplot(fit_dat, aes(x = clim, y = fit, color = as.factor(sp))) + 
-      geom_point() + geom_smooth(method = "lm") + 
-      theme_classic(base_size = 15) + 
-      xlab("Climate Variable") + ylab("Fitness") + 
-      scale_color_discrete(name = "Species")
+    if(mind){
+      p1 <- ggplot(fit_dat, aes(x = clim, y = fit, 
+                                color = as.factor(sp), group = ind)) + 
+        geom_point() + geom_smooth(method = "lm", se = FALSE) + 
+        theme_classic(base_size = 15) + 
+        xlab("Climate Variable") + ylab("Fitness") + 
+        scale_color_discrete(name = "Species")
+    }
+    else{
+      p1 <- ggplot(fit_dat, aes(x = clim, y = fit, color = as.factor(sp))) + 
+        geom_point() + geom_smooth(method = "lm", se = FALSE) + 
+        theme_classic(base_size = 15) + 
+        xlab("Climate Variable") + ylab("Fitness") + 
+        scale_color_discrete(name = "Species")
+    }
+    
     print(p1)
     
     p2 <- ggplot(pop_dat, aes(x = clim, y = size, color = as.factor(sp))) + 
-      geom_point() + geom_smooth(method = "lm") + 
+      geom_point() + geom_smooth(method = "lm", se = FALSE) + 
       theme_classic(base_size = 15) + 
       xlab("Climate Variable") + ylab("Population Count") + 
       scale_color_discrete(name = "Species")
@@ -144,9 +192,15 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
 
 set.seed(6)
 # what does increasing the variation in population-level responses do to inference?
-sim_fun(beta_mean = -2.5, beta_sd = 1)
+sim_fun(beta_mean = -2.5, beta_sd = 1, mind = TRUE, iv = TRUE, Ti = 10, 
+        NI = 100)
 sim_fun(beta_mean = -2.5, beta_sd = 2.5)
 sim_fun(beta_mean = -2.5, beta_sd = 5)
 sim_fun(beta_mean = -2.5, beta_sd = 10)
 
+# to do:
+# 1. test the hypothesis that diversity scales with population impacts IF their 
+# is a negative correlation between the population-level response and the 
+# population-level baseline fitness
 
+# 3. add multiple sites and test with hierarchical model

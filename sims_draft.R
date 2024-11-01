@@ -4,14 +4,14 @@
 
 sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20, 
          dd = FALSE, iv = FALSE, mind = FALSE, 
-         disp = 1, beta0_mean = 50, beta0_sd = 20, 
-         beta_mean = 0, beta_sd = 1,
-         alpha.sd = 0.01, ind_sd = .1, 
+         disp = 1, beta0_mean = 10, beta0_sd = 0.1, 
+         beta_mean = 0, beta_sd = 0.01,
+         alpha.sd = 0.1, ind_sd = .1, 
          p1 = 1, p2 = 1, burnin = 50, 
          model = TRUE, plot = TRUE){
   # S = number of species; Ti = length of time series; 
   # N0 = starting population sizes; NI = number of individuals samples yearly;
-  # dd = density-dependence; # iv = individual-level variation in climate responses; 
+  # iv = individual-level variation in climate responses; 
   # mind = marked individuals;
   # disp = dispersion parameter for negative binomial of pop size;
   # beta0_mean = mean population-level baseline performance; 
@@ -27,10 +27,7 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   
   if(mind & !iv) stop("Cannot mark individuals if there is no individual variation.")
   
-  if(dd){
-    # generate vector of self limitation terms
-    alpha <- abs(rnorm(S, 0, alpha.sd))
-  }
+  alpha <- abs(rnorm(S, 0, alpha.sd))
   
   # generate vector of population-level baseline performances
   lambda0 <- abs(rnorm(S, beta0_mean, beta0_sd))
@@ -67,48 +64,31 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
   
   for(i in 1:Ti){
     for(s in 1:S){
-      if(dd){
-        if(iv){
-          if(mind){
-            fit <- rnbinom(Ns[s] - NI, mu = (lambda0[s] + clim[i]*
-                                          rnorm(1, beta[s], ind_sd))/
-                             (1 + Ns[s]*alpha[s]), size = disp) 
-            ind_dat[s,i,] <- rnbinom(NI, mu = (lambda0[s] + clim[i]*
-                                            ind_eff[,s])/
-                                       (1 + Ns[s]*alpha[s]), size = disp)
-            fit <- c(fit, ind_dat[s,i,])
+      if(iv){
+        if(mind){
+          fit <- rnbinom(Ns[s] - NI, mu = (lambda0[s] + clim[i]*
+                                             rnorm(1, beta[s], ind_sd))/
+                           (1 + Ns[s]*alpha[s]), size = disp) 
+          ind_dat[s,i,] <- rnbinom(NI, mu = (lambda0[s] + clim[i]*
+                                               ind_eff[,s])/
+                                     (1 + Ns[s]*alpha[s]), size = disp)
+          fit <- c(fit, ind_dat[s,i,])
           }
-          else{
-            fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*
-                                          rnorm(1, beta[s], ind_sd))/
-                             (1 + Ns[s]*alpha[s]), size = disp)             
-          }
-        }
         else{
-          fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*beta[s])/
-                           (1 + Ns[s]*alpha[s]), size = disp)
+          fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*
+                                        rnorm(1, beta[s], ind_sd))/
+                           (1 + Ns[s]*alpha[s]), size = disp)       
         }
-      }
+        }
       else{
-        if(iv){
-          if(mind){
-            fit <- rnbinom(Ns[s] - NI, mu = (lambda0[s] + clim[i]*
-                                               rnorm(1, beta[s], ind_sd)), size = disp) 
-            ind_dat[s,i,] <- rnbinom(NI, mu = (lambda0[s] + clim[i]*
-                                            ind_eff[,s]), size = disp)
-            fit <- c(fit, ind_dat[s,i,])
-          }
-          else{
-            fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*
-                             rnorm(1, beta[s], ind_sd), size = disp)
-          }
+        fit <- rnbinom(Ns[s], mu = (lambda0[s] + clim[i]*beta[s])/
+                         (1 + Ns[s]*alpha[s]), size = disp)
         }
-        else{
-          fit <- rnbinom(Ns[s], mu = lambda0[s] + clim[i]*beta[s], size = disp)
-        }
-      }
+      
+      Ns[s] <- sum(fit)
       com_dat[s,i+1] <- rbinom(1, sum(fit), ps[s])
-      if(!mind) ind_dat[s,i,] <- sample(fit, NI)
+      if(!mind) ind_dat[s,i,] <- ifelse(length(fit) >= NI, 
+                                        sample(fit, NI), fit)
     }
   }
   
@@ -192,8 +172,7 @@ sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20,
 
 set.seed(6)
 # what does increasing the variation in population-level responses do to inference?
-sim_fun(beta_mean = -2.5, beta_sd = 1, mind = TRUE, iv = TRUE, Ti = 10, 
-        NI = 100)
+sim_fun(iv = TRUE, Ti = 30, NI = 10, beta_mean = -1, beta_sd = .5)
 sim_fun(beta_mean = -2.5, beta_sd = 2.5)
 sim_fun(beta_mean = -2.5, beta_sd = 5)
 sim_fun(beta_mean = -2.5, beta_sd = 10)

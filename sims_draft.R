@@ -1,11 +1,14 @@
 
+library(tidyverse)
+library(vegan)
+
 # Function to run cross-scale climate effects simulations
 # Jeremy Collings, October 2024
 
 sim_fun <- function(S = 10, Ti = 30, N0 = 100, NI = 20, 
          dd = FALSE, iv = FALSE, mind = FALSE, 
-         disp = 1, beta0_mean = 10, beta0_sd = 0.1, 
-         beta_mean = 0, beta_sd = 0.01,
+         disp = 1, beta0_mean = 10, beta0_sd = 2, 
+         beta_mean = 0, beta_sd = 0.1,
          alpha.sd = 0.1, ind_sd = .1, 
          p1 = 1, p2 = 1, burnin = 50, 
          model = TRUE, plot = TRUE){
@@ -183,3 +186,8 @@ sim_fun(beta_mean = -2.5, beta_sd = 10)
 # population-level baseline fitness
 
 # 3. add multiple sites and test with hierarchical model
+
+# bugs: 
+# fake individual-level variation
+# safe guard against mu in negbinom being negative
+

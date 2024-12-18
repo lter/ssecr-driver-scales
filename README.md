@@ -17,7 +17,7 @@ Anthropogenic impacts are rapidly altering historic environmental conditions, wi
 *Are the effects of environmental drivers consistent across ecological scales?*
 
 ### Approach
-Body size is known to be a strong predictor of fitness in fish, and changes in body size are likely to have impacts at the population and community levels. Leveraging long-term (5+ year) records of marine and aquatic fish communities, we will fit hierarchical models to evaluate how changes in water temperature affect individuals (i.e., fish length), populations (counts), and communities (Shannon's diversity and total community size). 
+Body size is known to be a strong predictor of fitness in fish, and changes in body size are likely to have impacts at the population and community levels. Leveraging long-term (5+ year) records of fish communities, we will fit hierarchical models to evaluate how changes in water temperature through time at a given site affect individuals (i.e., fish length), populations (counts), and communities (Shannon's diversity and total community size). We will also consider if/how temperature effects vary a) among species within a community and b) between aquatic systems (marine vs. freshwater).
 
 <img src="conceptual fig.png" alt="Project conceptual figure" width="100%"/>
 

@@ -13,10 +13,9 @@
 rm(list = ls())
 
 #create directory for LTER summary output and basic viz
-
-# ifelse(!dir.exists(file.path("data", "metadata")), 
-#        dir.create(file.path("data", "metadata")), 
-#        FALSE)
+dir.create(path = file.path("data"), showWarnings = F)
+dir.create(path = file.path("data", "raw_data"), showWarnings = F)
+dir.create(path = file.path("data", "metadata"), showWarnings = F)
 
 #set "dataset" based on the name of your raw data folder and what the output should look like for naming convention, This step is critical!  
 
@@ -29,7 +28,26 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt, vegan,
-                 neonUtilities, neonOS, terra)
+                 neonUtilities, neonOS, terra, googledrive)
+
+# authenticate Google Drive ------
+
+# Tell Google Drive your R session is allowed to acccess Drive stuff
+## Open this tutorial and work through it before running the following code
+## https://lter.github.io/scicomp/tutorial_googledrive-pkg.html
+googledrive::drive_auth()
+
+# Identify the desired file(s)
+neon_hopb_zip <- googledrive::drive_ls(path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hWuEzA-QJgNFuSZXZjSL6jtaUjBbBHNZ")) %>% 
+  dplyr::filter(name == "NEON_count-fish.zip")
+
+# Check that worked (should be one row / file)
+neon_hopb_zip
+
+# Download it
+purrr::walk2(.x = neon_hopb_zip$id, .y = neon_hopb_zip$name,
+             .f = ~ googledrive::drive_download(file = .x, overwrite = T,
+                                                path = file.path("data", "raw_data", .y)))
 
 # source(file = file.path("scripts",
 #                         "cleaning_function.R"))
@@ -39,8 +57,6 @@ librarian::shelf(supportR, tidyverse, summarytools,
 #ONLY RUN ONCE 
 
 # The stackByTable() (or stack_by_table()) function will unzip and join the files in the downloaded zip file. Do NOT unzip in Google drive! Download the zip file directly. 
-
-#NL change file path here
 
 stackByTable(file = file.path("data",
                               "raw_data",

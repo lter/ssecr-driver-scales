@@ -32,7 +32,7 @@ librarian::shelf(supportR, tidyverse, summarytools,
 
 # authenticate Google Drive ------
 
-# Tell Google Drive your R session is allowed to acccess Drive stuff
+# Tell Google Drive your R session is allowed to access Drive stuff
 ## Open this tutorial and work through it before running the following code
 ## https://lter.github.io/scicomp/tutorial_googledrive-pkg.html
 googledrive::drive_auth()
@@ -45,7 +45,8 @@ neon_hopb_zip <- googledrive::drive_ls(path = googledrive::as_id("https://drive.
 neon_hopb_zip
 
 # Download it
-purrr::walk2(.x = neon_hopb_zip$id, .y = neon_hopb_zip$name,
+purrr::walk2(.x = neon_hopb_zip$id, 
+             .y = neon_hopb_zip$name,
              .f = ~ googledrive::drive_download(file = .x, overwrite = T,
                                                 path = file.path("data", "raw_data", .y)))
 
@@ -54,13 +55,15 @@ purrr::walk2(.x = neon_hopb_zip$id, .y = neon_hopb_zip$name,
 
 ## load data ---------------------
 
+#test for code (without Google drive code)
+
 #ONLY RUN ONCE 
 
 # The stackByTable() (or stack_by_table()) function will unzip and join the files in the downloaded zip file. Do NOT unzip in Google drive! Download the zip file directly. 
 
-stackByTable(file = file.path("data",
-                              "raw_data",
-                              "NEON_count-fish.zip"))
+#No more error code!! Yeehaw.
+
+#stackByTable(file = file.path("NEON_count-fish.zip"))
 
 #these are the files that end up in the "stackedFiles" folder. This is what I put on Google Drive. 
 

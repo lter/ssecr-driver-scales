@@ -95,12 +95,31 @@ intermediate.directories <- function() {
 }
 
 
-
 #time series ------
 
 timeseries <- function(x){length(unique(x))} #function can can count unique years for each station. Easiest way is to use it with tapply(). Ex:
 
 #tapply(data$YEAR, list(data$SITE), timeseries)
 
+#download NEON -----
 
-
+neon_download <- function(site, dpID, dataset) {
+  savepath <- file.path("data", "raw_data", dataset)
+  
+  # Check if the directory is empty
+  if (length(list.files(savepath)) == 0) {
+    # Proceed with the download if the directory is empty
+    zipsByProduct(
+      dpID = dpID,
+      site = site,
+      package = "basic",
+      check.size = TRUE,
+      include.provisional = FALSE,
+      savepath = savepath
+    )
+  } 
+  else {
+    message("Data for ", site, 
+            " and ", dpID, " already exists and is not empty. Skipping download.")
+  }
+}

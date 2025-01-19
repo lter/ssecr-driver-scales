@@ -5,9 +5,9 @@ intermediate.names <- function() {
   
 }
 
-#intermediate.prep.fish() ------
+#intermediate.prep ------
 
-intermediate.prep.fish <- function(intermediate) {
+intermediate.prep <- function(intermediate) {
   # Define the required columns
   required_columns <- c("DATE", "SUBSITE", "SP_CODE", "SCI_NAME", "COMMON_NAME", "SIZE", "AREA")
   
@@ -34,7 +34,7 @@ intermediate.prep.fish <- function(intermediate) {
   file_path <- file.path("data", 
                          "raw_data",
                          dataset,
-                         paste0(dataset, "_fish_intermediate.csv"))
+                         paste0(dataset, "_intermediate.csv"))
   
   # Write the dataset to a .csv file
   write.csv(intermediate, 

@@ -221,7 +221,7 @@ intermediate <- data %>%
 
 #this custom function should do the rest 
 
-intermediate.prep.fish(intermediate)
+intermediate.prep(intermediate)
 
 #OPTIONAL VIZ: Play around with subsites by changing to True! The default is false. 
 

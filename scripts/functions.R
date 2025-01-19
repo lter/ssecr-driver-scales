@@ -34,7 +34,7 @@ intermediate.prep.fish <- function(intermediate) {
   file_path <- file.path("data", 
                          "raw_data",
                          dataset,
-                         paste0(dataset, "_intermediate_fish.csv"))
+                         paste0(dataset, "_fish_intermediate.csv"))
   
   # Write the dataset to a .csv file
   write.csv(intermediate, 

@@ -5,7 +5,7 @@ intermediate.names <- function() {
   
 }
 
-#intermediate.prep() ------
+#intermediate.prep.fish() ------
 
 intermediate.prep.fish <- function(intermediate) {
   # Define the required columns

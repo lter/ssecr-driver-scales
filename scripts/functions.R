@@ -48,20 +48,32 @@ intermediate.prep.fish <- function(intermediate) {
 #intermediate.directories -----
 
 intermediate.directories <- function() {
-  # create all potential non-existent directories within scales github project
+  # Define all directory paths
+  dirs <- c(
+    file.path("data", "metadata"),
+    file.path("data", "raw_data"),
+    file.path("data", "raw_data", "LTER_SBC")
+  )
   
-  ifelse(!dir.exists(file.path("data", "metadata")), 
-         dir.create(file.path("data", "metadata")), 
-         FALSE)
+  # Track if any directory is created
+  created_any <- FALSE
   
-  ifelse(!dir.exists(file.path("data", "raw_data")), 
-         dir.create(file.path("data", "raw_data")), 
-         FALSE)
+  # Check and create directories if needed
+  for (dir in dirs) {
+    if (!dir.exists(dir)) {
+      dir.create(dir)
+      message(paste("Directory", dir, "created."))
+      created_any <- TRUE
+    }
+  }
   
-  ifelse(!dir.exists(file.path("data", "raw_data", "LTER_SBC")), 
-         dir.create(file.path("data", "raw_data", "LTER_SBC")), 
-         FALSE)
+  # If no directories were created, print a summary message
+  if (!created_any) {
+    message("All directories already exist.")
+  }
 }
+
+
 
 #time series ------
 

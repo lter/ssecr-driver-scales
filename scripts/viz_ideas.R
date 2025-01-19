@@ -11,7 +11,7 @@ plot.top5 <- function(data, species_col, subsite = FALSE) {
   
   dataset <- dataset
   
-  palette <- c(palette_find("LTER")[1:4],palette_find("LTER")[6])
+  palette <- c(suppressMessages(palette_find("LTER")[1:4]), suppressMessages(palette_find("LTER")[6]))
   if(subsite) { 
 for(i in subsites) {
  
@@ -20,7 +20,7 @@ for(i in subsites) {
   codes <- intermediate %>%
     mutate(YEAR = year(DATE)) %>%
     filter(SUBSITE == i) %>%
-    # Using .data[[species_col]] to programmatically refer to the column
+    # Using .data[[species_col]] to refer to the column
     dplyr::count(.data[[species_col]]) %>%
     arrange(desc(n)) %>%
     head(5) %>%

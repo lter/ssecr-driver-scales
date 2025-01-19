@@ -52,7 +52,28 @@ intermediate.directories <- function() {
   dirs <- c(
     file.path("data", "metadata"),
     file.path("data", "raw_data"),
-    file.path("data", "raw_data", "LTER_SBC")
+    file.path("data", "raw_data", "LTER_SBC"),
+    file.path("data", "raw_data", "NEON_WALK"),
+    file.path("data", "raw_data", "NEON_PRPO"),
+    file.path("data", "raw_data", "IEP_LODI"),
+    file.path("data", "raw_data", "LTER_NTL"),
+    file.path("data", "raw_data", "LTER_ARC"),
+    file.path("data", "raw_data", "IEP_YOLO"),
+    file.path("data", "raw_data", "LTER_MCR"),
+    file.path("data", "raw_data", "LTER_VCR"),
+    file.path("data", "raw_data", "NEON_CRAM"),
+    file.path("data", "raw_data", "NEON_HOPB"),
+    file.path("data", "raw_data", "NEON_MAYF"),
+    file.path("data", "raw_data", "NEON_POSE"),
+    file.path("data", "raw_data", "NEON_ARIK"),
+    file.path("data", "raw_data", "NEON_CARI"),
+    file.path("data", "raw_data", "NEON_KING"),
+    file.path("data", "raw_data", "NEON_LECO"),
+    file.path("data", "raw_data", "NEON_LEWI"),
+    file.path("data", "raw_data", "NEON_MCDI"),
+    file.path("data", "raw_data", "NEON_PRIN"),
+    file.path("data", "raw_data", "NEON_PRLA"),
+    file.path("data", "raw_data", "NEON_PRFO"),
   )
   
   # Track if any directory is created

@@ -7,7 +7,7 @@ intermediate.names <- function() {
 
 #intermediate.prep() ------
 
-intermediate.prep <- function(intermediate) {
+intermediate.prep.fish <- function(intermediate) {
   # Define the required columns
   required_columns <- c("DATE", "SUBSITE", "SP_CODE", "SCI_NAME", "COMMON_NAME", "SIZE", "AREA")
   
@@ -34,7 +34,7 @@ intermediate.prep <- function(intermediate) {
   file_path <- file.path("data", 
                          "raw_data",
                          dataset,
-                         paste0(dataset, "_intermediate.csv"))
+                         paste0(dataset, "_intermediate_fish.csv"))
   
   # Write the dataset to a .csv file
   write.csv(intermediate, 
@@ -63,7 +63,7 @@ intermediate.directories <- function() {
          FALSE)
 }
 
-#timeseries ------
+#time series ------
 
 timeseries <- function(x){length(unique(x))} #function can can count unique years for each station. Easiest way is to use it with tapply(). Ex:
 

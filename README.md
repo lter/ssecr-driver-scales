@@ -1,12 +1,12 @@
 ## Effects of Environmental Drivers Across Ecological Scales
 
-### Investigators
-- Allison Case - endocrine lab manager, SEZARC
+### Investigators (alphabetical listing)
+- Allison Case - Endocrine lab manager, SEZARC
 - Jeremy A. Collings - PhD candidate, University of Oregon
 - Joey Krieger Lodge - PhD student, University of Colorado, Boulder
 - Evald Maceno - PhD candidate, Univeristy of Puerto Rico, Río Piedras
 - Sierra B. Perez - PhD candidate, Indiana University
-- Bethany L. Williams - postdoctoral fellow, University of Missouri, St. Louis
+- Bethany L. Williams - Postdoctoral fellow, University of Missouri, St. Louis
 
 ## Project Description
 

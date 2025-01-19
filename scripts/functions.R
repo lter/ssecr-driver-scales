@@ -103,12 +103,14 @@ timeseries <- function(x){length(unique(x))} #function can can count unique year
 
 #download NEON -----
 
-neon_download <- function(site, dpID, dataset) {
+neon_download <- neon_download <- function(site, dpID, dataset) {
   savepath <- file.path("data", "raw_data", dataset)
   
-  # Check if the directory is empty
-  if (length(list.files(savepath)) == 0) {
-    # Proceed with the download if the directory is empty
+  # Check if there's a subfolder starting with "files"
+  files_folder <- list.dirs(savepath, full.names = TRUE, recursive = FALSE)
+  
+  if (length(files_folder) == 0) {
+    # Proceed with the download if no other subfolders exist
     zipsByProduct(
       dpID = dpID,
       site = site,
@@ -117,9 +119,35 @@ neon_download <- function(site, dpID, dataset) {
       include.provisional = FALSE,
       savepath = savepath
     )
+    message("Download complete for ", site)
   } 
   else {
-    message("Data for ", site, 
-            " and ", dpID, " already exists and is not empty. Skipping download.")
+    message("Data for ", site, " already exists. Skipping download.")
+  }
+}
+  
+
+#stack NEON ------
+
+#download NEON -----
+
+neon_stack <- function(folder) {
+  savepath <- file.path("data", "raw_data", dataset, folder)
+  
+  # Check if there are any .zip files within subfolders
+  zip_files <- list.files(
+    path = savepath, 
+    pattern = "\\.zip$")
+  
+  if (length(zip_files) != 0) {
+    # Proceed with the stack if there are .zip files
+    stackByTable(filepath = file.path("data", 
+                                      "raw_data", 
+                                      dataset, 
+                                      folder, sep = ""))
+    message("Stacking complete for ", dataset)
+  } 
+  else {
+    message("Stacking for ", dataset, " already completed. Skipping stack.")
   }
 }

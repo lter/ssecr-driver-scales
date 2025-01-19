@@ -73,7 +73,7 @@ intermediate.directories <- function() {
     file.path("data", "raw_data", "NEON_MCDI"),
     file.path("data", "raw_data", "NEON_PRIN"),
     file.path("data", "raw_data", "NEON_PRLA"),
-    file.path("data", "raw_data", "NEON_PRFO"),
+    file.path("data", "raw_data", "NEON_PRFO")
   )
   
   # Track if any directory is created

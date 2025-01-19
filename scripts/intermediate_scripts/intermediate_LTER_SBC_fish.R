@@ -9,17 +9,7 @@
 
 rm(list = ls())
 
-#create directory for LTER summary output and basic graphs
-
-ifelse(!dir.exists(file.path("data", "metadata")), 
-       dir.create(file.path("data", "metadata")), 
-       FALSE)
-
-#set "site name" based on the name of your raw data folder and what the output should look like for naming convention, This step is critical!  
-
-dataset <- "LTER_SBC"
-
-## load packages and function --------------------
+## load packages and functions --------------------
 
 #install.packages("librarian")
 
@@ -29,19 +19,88 @@ librarian::shelf(supportR, tidyverse, summarytools,
                  vegan)
 
 source(file = file.path("scripts",
-                        "cleaning_function.R"))
+                        "functions.R"))
 
 source(file = file.path("scripts",
                         "viz_ideas.R"))
 
-## load data ---------------------
 
-#you will need to change this for your own data 
+#create directories for project if they don't already exist
+
+intermediate.directories()
+
+#set "site name" based on the name of your raw data folder and what the output should look like for naming convention, This step is critical!  
+
+dataset <- "LTER_SBC"
+
+
+## download data - run this code chunk only once ---------------------
+
+#only run this code once from EDI, then comment it out!
+
+# Package ID: knb-lter-sbc.17.40 Cataloging System:https://pasta.edirepository.org.
+# Data set title: SBC LTER: Reef: Kelp Forest Community Dynamics: Fish abundance.
+# Data set creator:  Daniel C Reed -
+# Data set creator:  Robert J Miller -
+# Contact:    -  Santa Barbara Coastal LTER  - sbclter@msi.ucsb.edu
+# Stylesheet v2.11 for metadata conversion into program: John H. Porter, Univ. Virginia, jporter@virginia.edu
+
+# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-sbc/17/40/a7899f2e57ea29a240be2c00cce7a0d4"
+# infile1 <- tempfile()
+# try(download.file(inUrl1,infile1,method="curl"))
+# if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
+# 
+# 
+# dt1 <-read.csv(infile1,header=F
+#                ,skip=1
+#                ,sep=","
+#                ,quot='"'
+#                , col.names=c(
+#                  "YEAR",
+#                  "MONTH",
+#                  "DATE",
+#                  "SITE",
+#                  "TRANSECT",
+#                  "QUAD",
+#                  "SIDE",
+#                  "VIS",
+#                  "SP_CODE",
+#                  "SIZE",
+#                  "COUNT",
+#                  "AREA",
+#                  "SCIENTIFIC_NAME",
+#                  "COMMON_NAME",
+#                  "TAXON_KINGDOM",
+#                  "TAXON_PHYLUM",
+#                  "TAXON_CLASS",
+#                  "TAXON_ORDER",
+#                  "TAXON_FAMILY",
+#                  "TAXON_GENUS",
+#                  "GROUP",
+#                  "SURVEY",
+#                  "MOBILITY",
+#                  "GROWTH_MORPH"), check.names=TRUE)
+# 
+# unlink(infile1)
+# write.csv(dt1,
+#           file = file.path("data", 
+#                            "raw_data", 
+#                            "LTER_SBC", 
+#                            "raw_LTER_SBC_fish.csv"),
+#           row.names = F)
+# rm(dt1)
+
+
+
+#since data is now downloaded you can work starting directly here on the same .csv as everyone else and will never have to re-download
+
+##load data -------
 
 data <- read.csv(file = file.path("data",
                                   "raw_data",
                                   "LTER_SBC",
-                                  "Annual_fish_comb_20240823.csv"))
+                                  "raw_LTER_SBC_fish.csv"))
+
 
 # checks --------------------
 
@@ -122,8 +181,6 @@ data <- data %>%
 
 #this is back to base R, but the output is really appealing 
 
-timeseries <- function(x){length(unique(x))} #function can can count unique years for each station
-
 tapply(data$YEAR, list(data$SITE), timeseries)
 
 #we can look at the same thing visually 
@@ -137,7 +194,7 @@ data %>%
   labs(x = "",
        y = "Site")
 
-#finalize intermediate data -----
+#finalize intermediate data / drop columns -----
 
 # drop any other irrelevant columns 
 
@@ -164,7 +221,7 @@ intermediate <- data %>%
 
 #this custom function should do the rest 
 
-intermediate.prep(intermediate)
+intermediate.prep.fish(intermediate)
 
 #OPTIONAL VIZ: Play around with subsites by changing to True! The default is false. 
 

@@ -44,4 +44,27 @@ intermediate.prep <- function(intermediate) {
   return("You may now add the intermediate .csv to Google Drive")
   
 }
+
+#scales.directories
+
+intermediate.directories <- function() {
+  # create all potential non-existent directories within scales github project
   
+  ifelse(!dir.exists(file.path("data", "metadata")), 
+         dir.create(file.path("data", "metadata")), 
+         FALSE)
+  
+  ifelse(!dir.exists(file.path("data", "raw_data")), 
+         dir.create(file.path("data", "raw_data")), 
+         FALSE)
+  
+  ifelse(!dir.exists(file.path("data", "raw_data", "LTER_SBC")), 
+         dir.create(file.path("data", "raw_data", "LTER_SBC")), 
+         FALSE)
+}
+
+#timeseries function
+
+timeseries <- function(x){length(unique(x))} #function can can count unique years for each station
+
+

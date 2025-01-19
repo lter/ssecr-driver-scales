@@ -45,7 +45,7 @@ intermediate.prep <- function(intermediate) {
   
 }
 
-#scales.directories
+#intermediate.directories -----
 
 intermediate.directories <- function() {
   # create all potential non-existent directories within scales github project
@@ -63,8 +63,11 @@ intermediate.directories <- function() {
          FALSE)
 }
 
-#timeseries function
+#timeseries ------
 
-timeseries <- function(x){length(unique(x))} #function can can count unique years for each station
+timeseries <- function(x){length(unique(x))} #function can can count unique years for each station. Easiest way is to use it with tapply(). Ex:
+
+#tapply(data$YEAR, list(data$SITE), timeseries)
+
 
 

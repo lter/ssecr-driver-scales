@@ -22,8 +22,9 @@ Here, we use a synthetic approach leveraging long-term (5+ year) datasets from L
   <li>Can intra- or interspecific variation in responses at one ecological level explain responses at higher levels of organization? </li>
    <li>Are patterns consistent across marine and freshwater ecosystems? </li>
 </ol>
-
-<img src="conceptual fig.png" alt="Project conceptual figure" width="95%"/>
+<p align="center">
+<img src="conceptual fig.png" alt="Project conceptual figure" width="65%"/>
+</p>
 
 ### Approach
 To estimate the effects of temperature and DO on individuals, populations, and communities, we plan to fit a series of hierarchical linear models, one model per each of the following scaled response variables: body size (individual-level), standardized catch per species (population-level), species diversity (community-level), and standardized catch across species (community-level). Assuming a sufficiently weak correlation between temperature and DO, we will include both variables as fixed effects in each of our four models. Additionally, each model will include spatial random intercepts to account for other sources of meaningful environmental variation among sites. Our individual and population level models will also include random slopes for species to estimate interspecific variation in temperature and DO effects. Finally, each of these models will be fit with data from either freshwater or marine sites, resulting in eight models in total. 

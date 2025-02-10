@@ -74,11 +74,11 @@ intermediate.directories()
   
   data[duplicated(data),] # no dupes!
   data <- data[!duplicated(data),] 
-
+  
 ## DROP COLUMNS --------------------
   
   data <- data %>% 
-    select(!c(uid, domainID, namedLocation, passEndTime, boutEndDate, passNumber, specimenNumber,
+    select(!c(uid, domainID, passEndTime, boutEndDate, specimenNumber,
               identificationReferences, samplerType, sampleTypeCollected, voucherSampleID, voucherSampleCode, dnaSampleID,            
               dnaSampleCode, identifiedBy, dataQF, barrierSubReach, publicationDate, release))
 
@@ -95,8 +95,6 @@ intermediate.directories()
   data <- data %>% 
     filter(fishTotalLength != 0) #this drops the NAs 
   
-
-
 ## LOAD & JOIN BULK DATA  --------------------
   
   bulk_data <- read.csv(file = file.path("data",
@@ -106,7 +104,7 @@ intermediate.directories()
                                          "stackedFiles",
                                          "fsh_bulkCount.csv"))
   bulk_data <- bulk_data %>% 
-    select(!c(uid, domainID, namedLocation, passEndTime, boutEndDate, passNumber, actualOrEstimated, 
+    select(!c(uid, domainID,  passEndTime, boutEndDate,actualOrEstimated, 
               identificationQualifier, identificationReferences, identifiedBy, identificationHistoryID, 
               dataQF, barrierSubReach, publicationDate, release))
   
@@ -116,9 +114,9 @@ intermediate.directories()
   data <- data %>% 
     merge(bulk_data, by=c("siteID", "passStartTime", "eventID", 
                           "taxonID", "scientificName", 
-                          "morphospeciesID", "freq", "remarks"), all = T) # join bulk data
+                          "morphospeciesID", "freq", "remarks", "namedLocation", "passNumber"), all = T) # join bulk data
   
-  data <- data[rep(row.names(data), data$freq), 1:17] # each fish now = 1 row
+  data <- data[rep(row.names(data), data$freq), 1:18] # each fish now = 1 row
   data <- data %>% 
     select(!c(freq)) # dropping freq column
 
@@ -155,7 +153,6 @@ intermediate.directories()
   # 0 obs of a subspecies
 
 ## JOIN ENVIRONMENTAL & SAMPLING EFFORT DATA --------------------
-
   enviro_data <- read.csv(file = file.path("data",
                                            "raw_data",
                                            dataset,
@@ -163,16 +160,19 @@ intermediate.directories()
                                            "stackedFiles",
                                            "fsh_perPass.csv"))
   enviro_data <- enviro_data %>% 
-    select(!c(uid, domainID, namedLocation, passStartTime, passEndTime, boutEndDate, passNumber, specificConductance,
+    select(!c(uid, domainID, passStartTime, passEndTime, boutEndDate, specificConductance,
               habitatType, subdominantHabitatType, initialFrequency, initialDutyCycle, initialVoltage,
               finalFrequency, finalDutyCycle, finalVoltage, settingsChanged, initialFrequency2, initialDutyCycle2,
               initialVoltage2, finalFrequency2, finalDutyCycle2, finalVoltage2, efTime2, settingsChanged2,
               netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent, barrierSubReach, dataQF,
               remarks, publicationDate, release))
+  data <- 
+    data %>% 
+    merge(enviro_data, by=c("siteID", "eventID", "namedLocation", "passNumber"), all = T) # join enviro data
   
   data <- data %>% 
-    merge(enviro_data, by=c("siteID", "eventID"), all = T) # join enviro data
-
+    filter(!is.na(taxonID)) # drops NAs that were introduced in merge
+  
 ## SAMPLING EFFORT --------------------
   
   # FOR ALL NEON STREAM SITES: 

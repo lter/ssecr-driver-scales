@@ -2,7 +2,7 @@
 # NEON - WALK - Fish electrofishing, gill netting, and fyke netting counts (https://doi.org/10.48443/kb2e-va82)
 # SCALES/ SSECR                  
 # Sierra Perez   
-# R version 4.3.2 (2023-10-31)
+# R version 4.4.2 (2024-10-31)
 #_________________________________
 
 # SETUP ---------------------
@@ -16,7 +16,7 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan)
+                 vegan, neonUtilities)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -78,8 +78,9 @@ intermediate.directories()
 ## DROP COLUMNS --------------------
   
   data <- data %>% 
-    select(!c(uid, domainID, namedLocation, passEndTime, passNumber, specimenNumber,
-              sampleTypeCollected, voucherSampleID, dnaSampleID, identifiedBy, publicationDate, release))
+    select(!c(uid, domainID, namedLocation, passEndTime, boutEndDate, passNumber, specimenNumber,
+              identificationReferences, samplerType, sampleTypeCollected, voucherSampleID, voucherSampleCode, dnaSampleID,            
+              dnaSampleCode, identifiedBy, dataQF, barrierSubReach, publicationDate, release))
 
 ## LENGTH --------------------
   
@@ -89,7 +90,7 @@ intermediate.directories()
     filter(fishTotalLength == 0) %>% dplyr::count() # no 0's!
   
   data %>% 
-    filter(is.na(fishTotalLength)) %>% dplyr::count() # 5 NA's
+    filter(is.na(fishTotalLength)) %>% dplyr::count() # 3 NA's
   
   data <- data %>% 
     filter(fishTotalLength != 0) #this drops the NAs 
@@ -105,10 +106,12 @@ intermediate.directories()
                                          "stackedFiles",
                                          "fsh_bulkCount.csv"))
   bulk_data <- bulk_data %>% 
-    select(!c(uid, domainID, namedLocation, passEndTime, passNumber, actualOrEstimated, 
-              identificationQualifier, identifiedBy, publicationDate, release))
+    select(!c(uid, domainID, namedLocation, passEndTime, boutEndDate, passNumber, actualOrEstimated, 
+              identificationQualifier, identificationReferences, identifiedBy, identificationHistoryID, 
+              dataQF, barrierSubReach, publicationDate, release))
   
-  colnames(bulk_data)[7]  <- "freq" # rename "bulkFishCount" to "n"
+  bulk_data <- bulk_data %>% 
+    dplyr::rename(freq = bulkFishCount) # rename "bulkFishCount" to "freq"
   data$freq <- 1 # add count column (i.e., each fish = 1)
   data <- data %>% 
     merge(bulk_data, by=c("siteID", "passStartTime", "eventID", 
@@ -136,7 +139,7 @@ intermediate.directories()
   hist(count_check$count, breaks = 20) 
   summary(count_check)
   
-  # most species have low abundances (mean = 80) -- less right skewed than some other sites (max = 324)
+  # most species have low abundances (mean = 83.6) -- less right skewed than some other sites (max = 351.0)
   # RHIATR seems to be dominant species (this is the same as for POSE!)
 
   # some missing taxonRank -> imputing where needed:
@@ -144,8 +147,8 @@ intermediate.directories()
   data$taxonRank[data$taxonID == "RHIATR"] <- "species"
 
   data %>% 
-    filter(taxonRank == "genus" | taxonRank == "family" | taxonRank == "order") %>% dplyr::count() 
-  # ***** 4 observations only ID'd to family, genus, or order *****
+    filter(taxonRank == "genus" | taxonRank == "family" | taxonRank == "order" | taxonRank == "phylum" |  taxonRank == "class") %>% dplyr::count() 
+  # 4 observations not ID'd to species 
   
   data %>% 
     filter(taxonRank == "subspecies") %>% dplyr::count() 
@@ -160,34 +163,30 @@ intermediate.directories()
                                            "stackedFiles",
                                            "fsh_perPass.csv"))
   enviro_data <- enviro_data %>% 
-    select(!c(uid, domainID, namedLocation, passStartTime, passEndTime, passNumber, reachID, specificConductance,
+    select(!c(uid, domainID, namedLocation, passStartTime, passEndTime, boutEndDate, passNumber, specificConductance,
               habitatType, subdominantHabitatType, initialFrequency, initialDutyCycle, initialVoltage,
               finalFrequency, finalDutyCycle, finalVoltage, settingsChanged, initialFrequency2, initialDutyCycle2,
               initialVoltage2, finalFrequency2, finalDutyCycle2, finalVoltage2, efTime2, settingsChanged2,
-              netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent,
+              netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent, barrierSubReach, dataQF,
               remarks, publicationDate, release))
   
   data <- data %>% 
     merge(enviro_data, by=c("siteID", "eventID"), all = T) # join enviro data
 
-## SITES & SPATIAL INFO --------------------
-
-  # there are "points" and "passes" per point
-  # "10 fish sampling reaches or segments are established at each site [I think these are the "points"]; 
-  # with 3 fixed reaches sampled during every sampling bout 
-  # and a random subset of 3 additional reaches or segments selected for sampling each year."
-  
-  unique(substr(data$eventID, 15, 16)) # there are 10 points sampled -- points 07, 09, 02 are fixed (ie sampled every time)
-  unique(substr(data$eventID, 18, 18)) # there are 3 passes
-
 ## SAMPLING EFFORT --------------------
   
-  unique(data$samplerType) # "electrofisher"
+  # FOR ALL NEON STREAM SITES: 
+    # "10 fish sampling reaches or segments are established at each site; 
+    # with 3 fixed reaches sampled during every sampling bout 
+    # and a random subset of 3 additional reaches or segments selected for sampling each year."
+  
+  unique(data$samplerType) # all sampling done by electrofishing for stream sites
   
   hist(data$efTime, breaks = 20) 
   
-  tapply(substr(data$date, 1, 7), list(substr(data$eventID, 15, 16)), timeseries) # unique samplings per point
-
+  timeseries <- function(x){length(unique(x))} 
+  tapply(substr(data$date, 1, 7), list(substr(data$eventID, 1, 16)), timeseries) # unique samplings
+  
 ## CHECK x2 --------------------
   
   # rerunning summarytools now all data are appended 
@@ -220,7 +219,7 @@ intermediate.directories()
   plot.presence(intermediate, 
                 species_col = "SCI_NAME",
                 subsite = F)
-  # **** 7 species only appear in 1 year *****
+  # **** 5 species only appear in 1 year *****
   
   plot.speciesaccum(count_check,
                     species_col = "SP_CODE",

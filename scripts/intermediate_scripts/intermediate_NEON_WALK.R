@@ -1,5 +1,5 @@
 #_________________________________
-# NEON - WALK - Fish electrofishing, gill netting, and fyke netting counts (https://doi.org/10.48443/kb2e-va82)
+# NEON - WALK - Fish electrofishing, gill netting, and fyke netting counts (https://doi.org/10.48443/ap3d-rp07)
 # SCALES/ SSECR                  
 # Sierra Perez   
 # R version 4.4.2 (2024-10-31)

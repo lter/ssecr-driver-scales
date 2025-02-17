@@ -40,7 +40,8 @@ dataset <- "NEON_CUPE"
 
 neon_download(site = "CUPE", 
               dpID = "DP1.20107.001", 
-              dataset)
+              dataset,
+              data_type = "fish")
 
 #add file name here of the downloaded zip folder
 
@@ -48,13 +49,18 @@ neon_download(site = "CUPE",
 
 folder <- "filesToStack20107"
 
-neon_stack(folder)
+data_type <- "fish"
+
+neon_stack(folder = folder,
+           dataset = dataset,
+           data_type = data_type)
 
 #you will need to change this for your own data 
 
 data <- read.csv(file = file.path("data",
                                   "raw_data",
                                   dataset,
+                                  data_type,
                                   folder,
                                   "stackedFiles",
                                   "fsh_perFish.csv"))
@@ -100,6 +106,7 @@ data <- data %>%
 bulk_data <- read.csv(file = file.path("data",
                                        "raw_data",
                                        dataset,
+                                       data_type,
                                        folder,
                                        "stackedFiles",
                                        "fsh_bulkCount.csv"))
@@ -153,6 +160,7 @@ data %>%
 enviro_data <- read.csv(file = file.path("data",
                                          "raw_data",
                                          dataset,
+                                         data_type,
                                          folder,
                                          "stackedFiles",
                                          "fsh_perPass.csv"))

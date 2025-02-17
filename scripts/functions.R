@@ -108,11 +108,21 @@ timeseries <- function(x){length(unique(x))} #function can can count unique year
 
 #download NEON -----
 
-neon_download <- neon_download <- function(site, dpID, dataset) {
+neon_download <- function(site, dpID, dataset, data_type) {
+  # Define the main savepath for the site
   savepath <- file.path("data", "raw_data", dataset)
   
+  # Create a subfolder for the specific dataset type (e.g., "fish" or "enviro")
+  dataset_folder <- file.path(savepath, data_type)
+  
+  # Check if the dataset subfolder exists
+  if (!dir.exists(dataset_folder)) {
+    # Create the subfolder if it doesn't exist
+    dir.create(dataset_folder, recursive = TRUE)
+  }
+  
   # Check if there's a subfolder starting with "files"
-  files_folder <- list.dirs(savepath, full.names = TRUE, recursive = FALSE)
+  files_folder <- list.dirs(dataset_folder, full.names = TRUE, recursive = FALSE)
   
   if (length(files_folder) == 0) {
     # Proceed with the download if no other subfolders exist
@@ -122,37 +132,49 @@ neon_download <- neon_download <- function(site, dpID, dataset) {
       package = "basic",
       check.size = TRUE,
       include.provisional = FALSE,
-      savepath = savepath
+      savepath = dataset_folder
     )
-    message("Download complete for ", site)
+    message("Download complete for ", site, " (", data_type, ")")
   } 
   else {
-    message("Data for ", site, " already exists. Skipping download.")
+    # If files exist, delete them and proceed with the download
+    unlink(files_folder, recursive = TRUE)  # Delete the existing files/folders
+    zipsByProduct(
+      dpID = dpID,
+      site = site,
+      package = "basic",
+      check.size = TRUE,
+      include.provisional = FALSE,
+      savepath = dataset_folder
+    )
+    message("Existing data for ", site, " (", data_type, ") overwritten. Download complete.")
   }
 }
   
 
 #stack NEON ------
 
-#download NEON -----
-
-neon_stack <- function(folder) {
-  savepath <- file.path("data", "raw_data", dataset, folder)
+neon_stack <- function(dataset, folder, data_type) {
+  # Define the main savepath using dataset
+  savepath <- file.path("data", "raw_data", dataset)
   
-  # Check if there are any .zip files within subfolders
+  # Create a subfolder for the specific data_type (e.g., "fish" or "enviro")
+  dataset_folder <- file.path(savepath, data_type, folder)
+  
+  # Check if there are any .zip files within the folder
   zip_files <- list.files(
-    path = savepath, 
-    pattern = "\\.zip$")
+    path = dataset_folder, 
+    pattern = "\\.zip$", 
+    full.names = TRUE
+  )
   
   if (length(zip_files) != 0) {
     # Proceed with the stack if there are .zip files
-    stackByTable(filepath = file.path("data", 
-                                      "raw_data", 
-                                      dataset, 
-                                      folder, sep = ""))
-    message("Stacking complete for ", dataset)
+    stackByTable(filepath = dataset_folder)
+    message("Stacking complete for ", dataset, " (", data_type, ")")
   } 
   else {
-    message("Stacking for ", dataset, " already completed. Skipping stack.")
+    message("Stacking for ", dataset, " (", data_type, ") already completed. Skipping stack.")
   }
 }
+

@@ -40,7 +40,8 @@
   
   neon_download(site = "CARI", 
                 dpID = "DP1.20107.001", 
-                dataset)
+                dataset,
+                data_type = "fish")
   
   #add file name here of the downloaded zip folder
   
@@ -48,13 +49,18 @@
   
   folder <- "filesToStack20107"
   
-  neon_stack(folder)
+  data_type <- "fish"
+  
+  neon_stack(folder = folder,
+             dataset = dataset,
+             data_type = "fish")
   
   #you will need to change this for your own data 
   
   data <- read.csv(file = file.path("data",
                                     "raw_data",
                                     dataset,
+                                    data_type,
                                     folder,
                                     "stackedFiles",
                                     "fsh_perFish.csv"))
@@ -128,6 +134,7 @@
   enviro_data <- read.csv(file = file.path("data",
                                            "raw_data",
                                            dataset,
+                                           data_type,
                                            folder,
                                            "stackedFiles",
                                            "fsh_perPass.csv"))

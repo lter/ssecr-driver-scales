@@ -16,7 +16,7 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan)
+                 vegan, googledrive)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -25,7 +25,7 @@ source(file = file.path("scripts",
                         "viz_ideas.R"))
 
 
-#create directories for project if they don't already exist
+#create LOCAL directories for project if they don't already exist
 
 intermediate.directories()
 
@@ -34,7 +34,7 @@ intermediate.directories()
 dataset <- "LTER_SBC"
 
 
-## download data - run this code chunk only once ---------------------
+## Downloaded data (AC did 2/17/25. Ignore this step) ---------------------
 
 #only run this code once from EDI, then comment it out!
 
@@ -49,8 +49,8 @@ dataset <- "LTER_SBC"
 # infile1 <- tempfile()
 # try(download.file(inUrl1,infile1,method="curl"))
 # if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
-# 
-# 
+#
+#
 # dt1 <-read.csv(infile1,header=F
 #                ,skip=1
 #                ,sep=","
@@ -80,27 +80,46 @@ dataset <- "LTER_SBC"
 #                  "SURVEY",
 #                  "MOBILITY",
 #                  "GROWTH_MORPH"), check.names=TRUE)
-# 
+#
 # unlink(infile1)
 # write.csv(dt1,
-#           file = file.path("data", 
-#                            "raw_data", 
-#                            "LTER_SBC", 
+#           file = file.path("data",
+#                            "raw_data",
+#                            "LTER_SBC",
 #                            "raw_LTER_SBC_fish.csv"),
 #           row.names = F)
 # rm(dt1)
 
+#upload raw, downloaded data to Google Drive folder. If it already exists in the Google Drive folder, it will overwrite it. So make sure people know if you're going to run this! 
+
+# shared_drive_id <- "0AAQ1XOtdPVI_Uk9PVA"
+# 
+# drive_auth()
+# 
+# #get folder id 
+# drive_get(c("raw_data", "LTER_SBC"),
+#           shared_drive = as_id(shared_drive_id))
+# 
+# folderid <- "1Na6D9e-N6BvXjiGhqCv3UH1sX0NcUzgl"
+# 
+# drive_put(media = file.path(
+#   "data",
+#   "raw_data",
+#   "LTER_SBC",
+#   "raw_LTER_SBC_fish.csv"),
+#   path = as_id(folderid))
 
 
 #since data is now downloaded you can work starting directly here on the same .csv as everyone else and will never have to re-download
 
-##load data -------
+##START HERE after loading functions up top: load data -------
+
+#manually download data from Drive - I cannot get this function to work and we need to move on. Download the data into the matching folder. 
 
 data <- read.csv(file = file.path("data",
                                   "raw_data",
                                   "LTER_SBC",
                                   "raw_LTER_SBC_fish.csv"))
-
 
 # checks --------------------
 

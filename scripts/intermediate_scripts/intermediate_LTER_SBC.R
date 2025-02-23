@@ -189,13 +189,100 @@ data %>%
   labs(x = "",
        y = "Site")
 
-data <- data %>% 
-  select(-c(AREA))
+fish <- data %>% 
+  select(DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME) %>% 
+  rename(SUBSITE = SITE) %>% 
+  mutate(YEAR = year(DATE))
+
+rm(data)
 
 #at the end of this data you should have DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME
 
-#PART 2: TEMP ----
+#PART 2: TEMP & DO ----
 
+#same thing here - only un-comment and run this code if you don't have access to the Google Drive where this was uploaded to 
+## download data from EDI ---------------------
+# 
+# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-sbc/6006/7/299a4b5019b3d1ceb950614b0955cfd9" 
+# infile1 <- tempfile()
+# try(download.file(inUrl1,infile1,method="curl"))
+# if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
+# 
+# 
+# dt1 <-read.csv(infile1,header=F 
+#                ,skip=1
+#                ,sep=","  
+#                ,quot='"' 
+#                , col.names=c(
+#                  "site",     
+#                  "datetime_UTC",     
+#                  "deployment_depth_m",     
+#                  "temperature_C",     
+#                  "DO_percent_saturation",     
+#                  "DO_mgl"    ), check.names=TRUE)
+# 
+# unlink(infile1)
+# 
+# # Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
+# 
+# if (class(dt1$site)!="factor") dt1$site<- as.factor(dt1$site)                                   
+# if (class(dt1$deployment_depth_m)=="factor") dt1$deployment_depth_m <-as.numeric(levels(dt1$deployment_depth_m))[as.integer(dt1$deployment_depth_m) ]               
+# if (class(dt1$deployment_depth_m)=="character") dt1$deployment_depth_m <-as.numeric(dt1$deployment_depth_m)
+# if (class(dt1$temperature_C)=="factor") dt1$temperature_C <-as.numeric(levels(dt1$temperature_C))[as.integer(dt1$temperature_C) ]               
+# if (class(dt1$temperature_C)=="character") dt1$temperature_C <-as.numeric(dt1$temperature_C)
+# if (class(dt1$DO_percent_saturation)=="factor") dt1$DO_percent_saturation <-as.numeric(levels(dt1$DO_percent_saturation))[as.integer(dt1$DO_percent_saturation) ]               
+# if (class(dt1$DO_percent_saturation)=="character") dt1$DO_percent_saturation <-as.numeric(dt1$DO_percent_saturation)
+# if (class(dt1$DO_mgl)=="factor") dt1$DO_mgl <-as.numeric(levels(dt1$DO_mgl))[as.integer(dt1$DO_mgl) ]               
+# if (class(dt1$DO_mgl)=="character") dt1$DO_mgl <-as.numeric(dt1$DO_mgl)
+# 
+# # Convert Missing Values to NA for non-dates
+# 
+# dt1$deployment_depth_m <- ifelse((trimws(as.character(dt1$deployment_depth_m))==trimws("NaN")),NA,dt1$deployment_depth_m)               
+# suppressWarnings(dt1$deployment_depth_m <- ifelse(!is.na(as.numeric("NaN")) & (trimws(as.character(dt1$deployment_depth_m))==as.character(as.numeric("NaN"))),NA,dt1$deployment_depth_m))
+# dt1$temperature_C <- ifelse((trimws(as.character(dt1$temperature_C))==trimws("NaN")),NA,dt1$temperature_C)               
+# suppressWarnings(dt1$temperature_C <- ifelse(!is.na(as.numeric("NaN")) & (trimws(as.character(dt1$temperature_C))==as.character(as.numeric("NaN"))),NA,dt1$temperature_C))
+# dt1$DO_percent_saturation <- ifelse((trimws(as.character(dt1$DO_percent_saturation))==trimws("NaN")),NA,dt1$DO_percent_saturation)               
+# suppressWarnings(dt1$DO_percent_saturation <- ifelse(!is.na(as.numeric("NaN")) & (trimws(as.character(dt1$DO_percent_saturation))==as.character(as.numeric("NaN"))),NA,dt1$DO_percent_saturation))
+# dt1$DO_mgl <- ifelse((trimws(as.character(dt1$DO_mgl))==trimws("NaN")),NA,dt1$DO_mgl)               
+# suppressWarnings(dt1$DO_mgl <- ifelse(!is.na(as.numeric("NaN")) & (trimws(as.character(dt1$DO_mgl))==as.character(as.numeric("NaN"))),NA,dt1$DO_mgl))
+# 
+# data<-dt1
+# rm(dt1)
+# #select just important variables from env data
+# data <- data %>% 
+#   select(c(site,datetime_UTC,temperature_C,DO_mgl))
+# 
+# #write file for temperature and do
+# write.csv(data,
+#           file = file.path("data", 
+#                            "raw_data", 
+#                            "LTER_SBC", 
+#                            "raw_LTER_SBC_do_temp.csv"),
+#           row.names = F)
+
+##start here for temp & do if files already download-------
+
+#STOP FOR NOW: Wait to figure out DO and TEMP plans for LTER SITE 
+
+envdata <- read.csv(file = file.path("data",
+                                  "raw_data",
+                                  "LTER_SBC",
+                                  "raw_LTER_SBC_do_temp.csv"))
+
+#match column names and date format with fish
+
+envdata <- envdata %>% 
+  rename(SUBSITE = site,
+         DATE = datetime_UTC,
+         TEMP = temperature_C,
+         DO = DO_mgl) %>% 
+  mutate(DATE = ymd_hms(DATE),
+         DATE = as.Date(DATE),
+         YEAR = year(DATE))
+
+setdiff(unique(fish$SUBSITE), unique(envdata$SUBSITE))
+sort(unique(fish$SUBSITE))
+sort(unique(envdata$SUBSITE))
 
 #finalize intermediate data -----
 

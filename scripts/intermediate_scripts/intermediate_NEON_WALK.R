@@ -194,7 +194,7 @@ intermediate.directories()
   
   unique(data$samplerType) # all sampling done by electrofishing for stream sites
   
-  hist(data$efTime, breaks = 20) 
+ # hist(data$efTime, breaks = 20) 
   
   timeseries <- function(x){length(unique(x))} 
   tapply(substr(data$date, 1, 7), list(substr(data$eventID, 1, 16)), timeseries) # unique samplings
@@ -218,7 +218,7 @@ intermediate.directories()
                   SIZE = fishTotalLength,
                   SUBSITE = siteID) %>% 
     mutate(YEAR = year(DATE)) %>% 
-    select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME)
+    select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR)
   
   #PART #2: TEMP ------
   
@@ -247,12 +247,12 @@ intermediate.directories()
   ## CHECKS --------------------
   
   # get generic output on data structures and unique values for each - this you can keep! 
-  
-  summarytools::view(summarytools::dfSummary(temp),
-                     file = file.path("data",
-                                      "metadata",
-                                      paste0(dataset, 
-                                             "_datasummary.html")))
+  #these take a while to make so only use if necessary
+  # summarytools::view(summarytools::dfSummary(temp),
+  #                    file = file.path("data",
+  #                                     "metadata",
+  #                                     paste0(dataset, 
+  #                                            "_datasummary.html")))
   
   # SOME NOTES ON DP1.20054.001
   # horizontalPosition: 101 (upstream), 102 (downstream)
@@ -274,7 +274,7 @@ intermediate.directories()
   ## DROP COLUMNS --------------------
   
   temp <- temp %>% 
-    select(siteID, YEAR, DATE, contains(c("Minimum", "Maximum", "Mean"))) %>% 
+    select(siteID, YEAR, DATE, contains(c("Minimum", "Maximum", "Mean"))) %>%
     select(-surfacewaterTempStdErMean)
   
   ## CALCULATE TEMP VARIABLES --------------------
@@ -292,27 +292,110 @@ intermediate.directories()
     ungroup() %>% 
     group_by(siteID, YEAR) %>% 
     reframe(mean_daily_temp = mean(mean_daily_temp, na.rm = T),
-                                       mean_max_temp = mean(mean_max_temp, 
-                                                            na.rm = T),
-                                       mean_min_temp = mean(mean_min_temp, 
-                                                            na.rm = T)) %>% 
+            mean_max_temp = mean(mean_max_temp, na.rm = T),
+            mean_min_temp = mean(mean_min_temp,na.rm = T)) %>% 
     rename(SUBSITE = siteID) # get variables A, B, C
   
   #PART #3: DO ------
   
+  ## LOAD DATA ---------------------
   
-# FINALIZE INTERMEDIATE DATA --------------------
+  #make sure to double check above you've set the "dataset" object to the name of the subfolder where this data is going to live! 
+  
+  neon_download(site = "WALK", 
+                dpID = "DP1.20288.001", 
+                dataset,
+                data_type = "DO")
+  
+  #add file name here of the downloaded zip folder
+  
+  #here, add the name of the folder to find everything in for the NEON stacked data! 
+  
+  folder <- "filesToStack20288"
+  
+  neon_stack(folder = "filesToStack20288", dataset, data_type = "DO")
+  
+  #you will need to change this for your own data 
+  DO <- read.csv(file = file.path("data",
+                                  "raw_data",
+                                  dataset,
+                                  "DO",
+                                  folder,
+                                  "stackedFiles",
+                                  "waq_instantaneous.csv")) 
+  
+  ## CHECKS --------------------
+  
+  #get generic output on data structures and unique values for each - this you can keep! 
+  # It's set up so that it will name it based on your unique site value you named earlier. 
+  #only run if necessary (takes awhile)
+  # summarytools::view(summarytools::dfSummary(DO),
+  #                    file = file.path("data",
+  #                                     "metadata",
+  #                                     paste0(dataset, 
+  #                                            "_datasummary.html")))
+  
+  # SOME NOTES ON DP1.20288.001
+  # horizontalPosition: 101 (upstream), 102 (downstream)
+  # dissolvedOxygenFinalQF: 0 (pass), 1 (fail)
+  
+  ##DATES -------
+  
+  DO <- DO %>%
+    mutate(DATE = ymd_hms(startDateTime),
+      DATE = as.Date(DATE),
+      YEAR = year(DATE))
+  
+  ## QC --------------------    
+  
+  DO <- DO %>% 
+    filter(!dissolvedOxygenFinalQF == 1) # drop observations that are flagged as potentially inaccurate
+  
+  ## DROP COLUMNS --------------------
+  
+  DO <- DO %>% 
+    select(c(siteID, dissolvedOxygen, YEAR, DATE))
+  
+  ## CALCULATE DO VARIABLES --------------------
+  
+  # VARIABLES
+  # D) annual average DO (might scratch?)
+  # E) annual mean daily DO
+  # F) annual mean min DO
+  
+  daily_DO <- DO %>% 
+    group_by(siteID, YEAR, DATE) %>% 
+    reframe(mean_daily_DO = mean(dissolvedOxygen, na.rm = T),
+            mean_min_DO = min(dissolvedOxygen, na.rm = T)) # get daily mean &
+  
+    daily_DO <- daily_DO %>% 
+      group_by(siteID, YEAR) %>% 
+      reframe(mean_daily_DO = mean(mean_daily_DO, na.rm = T),
+              mean_min_DO = mean(mean_min_DO, na.rm = T)) %>%  # variables E & F 
+      rename(SUBSITE = siteID)
+  
+    annual_DO <- DO %>% 
+      group_by(siteID, YEAR) %>%
+      reframe(annual_avg_DO = mean(dissolvedOxygen, na.rm = T)) %>% 
+      rename(SUBSITE = siteID) #variable D
+  
+#finalize DO 
+    
+ DO_final <- left_join(daily_DO, annual_DO)
+    
+#finalize environmental data 
 
+ enviro_final <- left_join(DO_final, temp_final)
 
+#PART #4: HARMONIZE TEMP & DO with FISH
+ 
+ intermediate <- left_join(fish, enviro_final, by = c("SUBSITE", "YEAR"))
+  
+# PART 5: FINALIZE INTERMEDIATE DATA --------------------
+ 
   #Here, you'll want to rename any columns you already fit to have our required column naming conventions
   
   intermediate.names()
-  
-  intermediate <- data %>% 
-    dplyr::rename(DATE = date,
-                  SP_CODE = taxonID,
-                  SCI_NAME = scientificName,
-                  SIZE = fishTotalLength)
   
   intermediate.prep(intermediate)
 

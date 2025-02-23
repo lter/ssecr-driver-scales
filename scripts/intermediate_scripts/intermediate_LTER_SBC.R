@@ -1,7 +1,7 @@
 #_________________________________
 #LTER SBC - Annual fish surveys  
 # SCALES/ SSECR                  
-# Allie Case   
+# Allie Case / Bethany Williams  
 # R Version: 4.4.2 (2024-10-31) -- "Pile of Leaves"
 #_________________________________
 
@@ -9,14 +9,24 @@
 
 rm(list = ls())
 
-## load packages and functions --------------------
+#create directory for LTER summary output and basic graphs
+
+ifelse(!dir.exists(file.path("data", "metadata")), 
+       dir.create(file.path("data", "metadata")), 
+       FALSE)
+
+#set "site name" based on the name of your raw data folder and what the output should look like for naming convention, This step is critical!  
+
+dataset <- "LTER_SBC"
+
+## load packages and function --------------------
 
 #install.packages("librarian")
 
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan, googledrive)
+                 vegan)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -24,19 +34,9 @@ source(file = file.path("scripts",
 source(file = file.path("scripts",
                         "viz_ideas.R"))
 
+## load data ---------------------
 
-#create LOCAL directories for project if they don't already exist
-
-intermediate.directories()
-
-#set "site name" based on the name of your raw data folder and what the output should look like for naming convention, This step is critical!  
-
-dataset <- "LTER_SBC"
-
-
-## Downloaded data (AC did 2/17/25. Ignore this step) ---------------------
-
-#only run this code once from EDI, then comment it out!
+#Downloading the data has already been done for you by BW. To download the "raw" data from Google Drive, use the code provided below all the comments. 
 
 # Package ID: knb-lter-sbc.17.40 Cataloging System:https://pasta.edirepository.org.
 # Data set title: SBC LTER: Reef: Kelp Forest Community Dynamics: Fish abundance.
@@ -49,8 +49,6 @@ dataset <- "LTER_SBC"
 # infile1 <- tempfile()
 # try(download.file(inUrl1,infile1,method="curl"))
 # if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
-#
-#
 # dt1 <-read.csv(infile1,header=F
 #                ,skip=1
 #                ,sep=","
@@ -62,64 +60,42 @@ dataset <- "LTER_SBC"
 #                  "SITE",
 #                  "TRANSECT",
 #                  "QUAD",
-#                  "SIDE",
-#                  "VIS",
-#                  "SP_CODE",
-#                  "SIZE",
-#                  "COUNT",
-#                  "AREA",
-#                  "SCIENTIFIC_NAME",
+#                "SIDE",
+#                 "VIS",
+#                 "SP_CODE",
+#                 "SIZE",
+#                 "COUNT",
+#                 "AREA",
+#                 "SCIENTIFIC_NAME",
 #                  "COMMON_NAME",
-#                  "TAXON_KINGDOM",
-#                  "TAXON_PHYLUM",
-#                  "TAXON_CLASS",
-#                  "TAXON_ORDER",
-#                  "TAXON_FAMILY",
-#                  "TAXON_GENUS",
-#                  "GROUP",
-#                  "SURVEY",
-#                  "MOBILITY",
-#                  "GROWTH_MORPH"), check.names=TRUE)
-#
+#                   "TAXON_KINGDOM",
+#                   "TAXON_PHYLUM",
+#                   "TAXON_CLASS",
+#                   "TAXON_ORDER",
+#                   "TAXON_FAMILY",
+#                   "TAXON_GENUS",
+#                   "GROUP",
+#                   "SURVEY",
+#                   "MOBILITY",
+#                 "GROWTH_MORPH"), check.names=TRUE)
+# 
 # unlink(infile1)
 # write.csv(dt1,
-#           file = file.path("data",
-#                            "raw_data",
-#                            "LTER_SBC",
-#                            "raw_LTER_SBC_fish.csv"),
-#           row.names = F)
-# rm(dt1)
+#            file = file.path("data",
+#                             "raw_data",
+#                             "LTER_SBC",
+#                             "raw_LTER_SBC_fish.csv"),
+#            row.names = F)
+#  rm(dt1)
 
-#upload raw, downloaded data to Google Drive folder. If it already exists in the Google Drive folder, it will overwrite it. So make sure people know if you're going to run this! 
-
-# shared_drive_id <- "0AAQ1XOtdPVI_Uk9PVA"
-# 
-# drive_auth()
-# 
-# #get folder id 
-# drive_get(c("raw_data", "LTER_SBC"),
-#           shared_drive = as_id(shared_drive_id))
-# 
-# folderid <- "1Na6D9e-N6BvXjiGhqCv3UH1sX0NcUzgl"
-# 
-# drive_put(media = file.path(
-#   "data",
-#   "raw_data",
-#   "LTER_SBC",
-#   "raw_LTER_SBC_fish.csv"),
-#   path = as_id(folderid))
-
-
-#since data is now downloaded you can work starting directly here on the same .csv as everyone else and will never have to re-download
-
-##START HERE after loading functions up top: load data -------
-
-#manually download data from Drive - I cannot get this function to work and we need to move on. Download the data into the matching folder. 
+#read in data - make sure to download from Google Drive
 
 data <- read.csv(file = file.path("data",
                                   "raw_data",
                                   "LTER_SBC",
                                   "raw_LTER_SBC_fish.csv"))
+
+#PART 1: FISH -----
 
 # checks --------------------
 
@@ -130,8 +106,6 @@ summarytools::view(summarytools::dfSummary(data),
                                     "metadata",
                                     paste0(dataset, 
                                            "_datasummary.html")))
-
-
 
 #here is where I also throw in questions about things I don't know AND also don't fit an obvious "block" of work like dates, species, spatial. What are the different survey methods? I made a note in the metadata that there are technically two different ones.
 
@@ -200,6 +174,8 @@ data <- data %>%
 
 #this is back to base R, but the output is really appealing 
 
+timeseries <- function(x){length(unique(x))} #function can can count unique years for each station
+
 tapply(data$YEAR, list(data$SITE), timeseries)
 
 #we can look at the same thing visually 
@@ -213,7 +189,15 @@ data %>%
   labs(x = "",
        y = "Site")
 
-#finalize intermediate data / drop columns -----
+data <- data %>% 
+  select(-c(AREA))
+
+#at the end of this data you should have DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME
+
+#PART 2: TEMP ----
+
+
+#finalize intermediate data -----
 
 # drop any other irrelevant columns 
 
@@ -235,8 +219,8 @@ intermediate.names()
 
 intermediate <- data %>% 
   rename(SUBSITE = SITE,
-         SCI_NAME = SCIENTIFIC_NAME)
-
+         SCI_NAME = SCIENTIFIC_NAME) %>% 
+  select(-c(AREA))
 
 #this custom function should do the rest 
 

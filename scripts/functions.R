@@ -1,7 +1,7 @@
 
 #intermediate.names() -----
 intermediate.names <- function() {
-  return("Required column names: DATE, SUBSITE, SP_CODE, SCI_NAME, COMMON_NAME, SIZE")
+  return("Required column names: DATE, SUBSITE, SP_CODE, SCI_NAME, COMMON_NAME, SIZE, YEAR, mean_daily_DO, mean_min_DO, annual_avg_DO, mean_daily_temp, mean_max_temp, mean_min_temp")
   
 }
 
@@ -9,7 +9,7 @@ intermediate.names <- function() {
 
 intermediate.prep <- function(intermediate) {
   # Define the required columns
-  required_columns <- c("DATE", "SUBSITE", "SP_CODE", "SCI_NAME", "COMMON_NAME", "SIZE")
+  required_columns <- c("DATE", "SUBSITE", "SP_CODE", "SCI_NAME", "COMMON_NAME", "SIZE", "YEAR", "mean_daily_DO", "mean_min_DO", "annual_avg_DO", "mean_daily_temp", "mean_max_temp", "mean_min_temp")
   
   # Identify missing columns
   missing_columns <- setdiff(required_columns, names(intermediate))

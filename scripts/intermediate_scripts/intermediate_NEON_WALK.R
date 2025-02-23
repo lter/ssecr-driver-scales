@@ -1,5 +1,7 @@
 #_________________________________
 # NEON - WALK - Fish electrofishing, gill netting, and fyke netting counts (https://doi.org/10.48443/ap3d-rp07)
+#Temperature (digital thermistor) of surface water (https://doi.org/10.48443/tp3q-yc71)
+# Water quality (https://doi.org/10.48443/03mj-t174)
 # SCALES/ SSECR                  
 # Sierra Perez   
 # R version 4.4.2 (2024-10-31)
@@ -62,11 +64,11 @@ intermediate.directories()
   data <- read.csv(file = file.path("data",
                                     "raw_data",
                                     dataset,
-                                    data_type,
+                                    "fish",
                                     folder,
                                     "stackedFiles",
                                     "fsh_perFish.csv"))
-
+#PART #1: FISH ------
   # CHECKS --------------------
   
   #get generic output on data structures and unique values for each - this you can keep! 
@@ -161,28 +163,28 @@ intermediate.directories()
     filter(taxonRank == "subspecies") %>% dplyr::count() 
   # 0 obs of a subspecies
 
-## JOIN ENVIRONMENTAL & SAMPLING EFFORT DATA --------------------
-  enviro_data <- read.csv(file = file.path("data",
-                                           "raw_data",
-                                           dataset,
-                                           data_type,
-                                           folder,
-                                           "stackedFiles",
-                                           "fsh_perPass.csv"))
-  enviro_data <- enviro_data %>% 
-    select(!c(uid, domainID, passStartTime, passEndTime, boutEndDate, specificConductance,
-              habitatType, subdominantHabitatType, initialFrequency, initialDutyCycle, initialVoltage,
-              finalFrequency, finalDutyCycle, finalVoltage, settingsChanged, initialFrequency2, initialDutyCycle2,
-              initialVoltage2, finalFrequency2, finalDutyCycle2, finalVoltage2, efTime2, settingsChanged2,
-              netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent, barrierSubReach, dataQF,
-              remarks, publicationDate, release))
-  data <- 
-    data %>% 
-    merge(enviro_data, by=c("siteID", "eventID", "namedLocation", "passNumber"), all = T) # join enviro data
-  
-  data <- data %>% 
-    filter(!is.na(taxonID)) # drops NAs that were introduced in merge
-  
+# ## JOIN ENVIRONMENTAL & SAMPLING EFFORT DATA (old) 
+#   enviro_data <- read.csv(file = file.path("data",
+#                                            "raw_data",
+#                                            dataset,
+#                                            data_type,
+#                                            folder,
+#                                            "stackedFiles",
+#                                            "fsh_perPass.csv"))
+#   enviro_data <- enviro_data %>% 
+#     select(!c(uid, domainID, passStartTime, passEndTime, boutEndDate, specificConductance,
+#               habitatType, subdominantHabitatType, initialFrequency, initialDutyCycle, initialVoltage,
+#               finalFrequency, finalDutyCycle, finalVoltage, settingsChanged, initialFrequency2, initialDutyCycle2,
+#               initialVoltage2, finalFrequency2, finalDutyCycle2, finalVoltage2, efTime2, settingsChanged2,
+#               netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent, barrierSubReach, dataQF,
+#               remarks, publicationDate, release))
+#   data <- 
+#     data %>% 
+#     merge(enviro_data, by=c("siteID", "eventID", "namedLocation", "passNumber"), all = T) # join enviro data
+#   
+#   data <- data %>% 
+#     filter(!is.na(taxonID)) # drops NAs that were introduced in merge
+#   
 ## SAMPLING EFFORT --------------------
   
   # FOR ALL NEON STREAM SITES: 
@@ -206,6 +208,99 @@ intermediate.directories()
                                       paste0(dataset, 
                                              "_datasummary.html")))
 
+
+  #at the end of the fish section, we should have data that is DATE, SITE/SUBSITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME (not for NEON stuff), YEAR
+  
+  fish <- data %>% 
+    dplyr::rename(DATE = date,
+                  SP_CODE = taxonID,
+                  SCI_NAME = scientificName,
+                  SIZE = fishTotalLength,
+                  SUBSITE = siteID) %>% 
+    mutate(YEAR = year(DATE)) %>% 
+    select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME)
+  
+  #PART #2: TEMP ------
+  
+  # make sure to double check above you've set the "dataset" object to the name of the subfolder where this data is going to live! 
+  # "data_type" is the name for the subfolder for this data in site raw data folder
+  
+  neon_download(site = "WALK", 
+                dpID = "DP1.20054.001", 
+                dataset,
+                data_type = "temp")
+  
+  # add the name of the folder to find everything in for the NEON stacked data! 
+  folder <- "filesToStack20054"
+  
+  neon_stack(folder = "filesToStack20054", dataset, data_type = "temp")
+  
+  # this will be the same path for all NEON sites
+  temp <- read.csv(file = file.path("data",
+                                    "raw_data",
+                                    dataset,
+                                    "temp",
+                                    folder,
+                                    "stackedFiles",
+                                    "TOSW_30_min.csv")) 
+  # used the 30 min resolution (instead of the 5 min) because the file is 6x smaller 
+  ## CHECKS --------------------
+  
+  # get generic output on data structures and unique values for each - this you can keep! 
+  
+  summarytools::view(summarytools::dfSummary(temp),
+                     file = file.path("data",
+                                      "metadata",
+                                      paste0(dataset, 
+                                             "_datasummary.html")))
+  
+  # SOME NOTES ON DP1.20054.001
+  # horizontalPosition: 101 (upstream), 102 (downstream)
+  # sWatTempFinalQF: 0 (pass), 1 (fail)
+  
+  ## DATES --------------------
+  
+  #change date format to match LTER and overall actual date format
+  temp <- temp %>% 
+    mutate(DATE = ymd_hms(startDateTime),
+              DATE = as.Date(DATE),
+              YEAR = year(DATE))
+  
+  ## QC --------------------    
+  
+  temp <- temp %>% 
+    filter(!sWatTempFinalQF == 1) # drop observations that are flagged as potentially inaccurate
+  
+  ## DROP COLUMNS --------------------
+  
+  temp <- temp %>% 
+    select(siteID, YEAR, DATE, contains(c("Minimum", "Maximum", "Mean"))) %>% 
+    select(-surfacewaterTempStdErMean)
+  
+  ## CALCULATE TEMP VARIABLES --------------------
+  
+  # VARIABLES
+  # A) annual average temperature (rational: growing season avg would require identifying growing season at each site)
+  # B) annual mean daily max temperature
+  # C) annual mean daily min temperature
+  
+  temp_final <- temp %>% 
+    group_by(siteID, YEAR, DATE) %>% 
+    reframe(mean_daily_temp = mean(surfacewaterTempMean, na.rm = T),
+            mean_max_temp = mean(surfacewaterTempMaximum, na.rm = T),
+            mean_min_temp = mean(surfacewaterTempMinimum, na.rm = T)) %>% 
+    ungroup() %>% 
+    group_by(siteID, YEAR) %>% 
+    reframe(mean_daily_temp = mean(mean_daily_temp, na.rm = T),
+                                       mean_max_temp = mean(mean_max_temp, 
+                                                            na.rm = T),
+                                       mean_min_temp = mean(mean_min_temp, 
+                                                            na.rm = T)) %>% 
+    rename(SUBSITE = siteID) # get variables A, B, C
+  
+  #PART #3: DO ------
+  
+  
 # FINALIZE INTERMEDIATE DATA --------------------
 
 

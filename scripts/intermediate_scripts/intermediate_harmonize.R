@@ -31,8 +31,10 @@ source(file = file.path("scripts",
 harmonized <- list.files(path = file.path("data", 
                                            "intermediate_data",
                                            "intermediate_data2"),
-                          pattern = "\\.csv$", full.names = TRUE) %>%
+                          pattern = "\\.csv$", 
+                         full.names = TRUE) %>%
   purrr::map_dfr(read_csv)  # Reads and binds all csvs
 
+unique(harmonized$SUBSITE)
 
 

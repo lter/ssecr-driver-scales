@@ -205,16 +205,17 @@ summarytools::view(summarytools::dfSummary(data),
                                     paste0(dataset, 
                                            "_datasummary.html")))
 
-#at the end of the fish section, we should have data that is DATE, SITE/SUBSITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME (not for NEON stuff), YEAR
+#at the end of the fish section, we should have data that is DATE, SITE/SUBSITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME (not for NEON stuff), YEAR, EFFORT
 
 fish <- data %>% 
   dplyr::rename(DATE = date,
                 SP_CODE = taxonID,
                 SCI_NAME = scientificName,
                 SIZE = fishTotalLength,
-                SUBSITE = siteID) %>% 
+                SUBSITE = siteID,
+                EFFORT = efTime) %>% 
   mutate(YEAR = year(DATE)) %>% 
-  select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR)
+  select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR, EFFORT)
 
 #PART #2: TEMP ------
 
@@ -290,7 +291,12 @@ temp_final <- temp %>%
   reframe(mean_daily_temp = mean(mean_daily_temp, na.rm = T),
           mean_max_temp = mean(mean_max_temp, na.rm = T),
           mean_min_temp = mean(mean_min_temp,na.rm = T)) %>% 
-  rename(SUBSITE = siteID) # get variables A, B, C
+  dplyr::rename(SUBSITE = siteID) # get variables A, B, C
+
+temp_final <- temp_final %>% 
+  filter(!YEAR == 2017) # drop 2017 b/c averages low b/c temp data only for Nov-Dec of that year
+
+temp_final$YEAR <- temp_final$YEAR + 1 # offset year before joining to fish data
 
 #PART #3: DO ------
 
@@ -368,20 +374,22 @@ daily_DO <- daily_DO %>%
   group_by(siteID, YEAR) %>% 
   reframe(mean_daily_DO = mean(mean_daily_DO, na.rm = T),
           mean_min_DO = mean(mean_min_DO, na.rm = T)) %>%  # variables E & F 
-  rename(SUBSITE = siteID)
+  dplyr::rename(SUBSITE = siteID)
 
 annual_DO <- DO %>% 
   group_by(siteID, YEAR) %>%
   reframe(annual_avg_DO = mean(dissolvedOxygen, na.rm = T)) %>% 
-  rename(SUBSITE = siteID) #variable D
+  dplyr::rename(SUBSITE = siteID) #variable D
 
 #finalize DO 
 
 DO_final <- left_join(daily_DO, annual_DO)
+DO_final$YEAR <- DO_final$YEAR + 1 # offset year before joining to fish data
 
 #finalize environmental data 
 
-enviro_final <- left_join(DO_final, temp_final)
+enviro_final <- temp_final %>%
+  merge(DO_final, by=c("SUBSITE", "YEAR"), all = T) # use merge not join--join drops years if temp or DO missing for year
 
 #PART #4: HARMONIZE TEMP & DO with FISH
 

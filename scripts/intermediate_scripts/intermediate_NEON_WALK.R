@@ -390,7 +390,8 @@ intermediate.directories()
 
 #finalize environmental data 
 
- enviro_final <- left_join(DO_final, temp_final)
+ enviro_final <- temp_final %>%
+   merge(DO_final, by=c("SUBSITE", "YEAR"), all = T) # use merge not join--join drops years if temp or DO missing for year
 
 #PART #4: HARMONIZE TEMP & DO with FISH
  

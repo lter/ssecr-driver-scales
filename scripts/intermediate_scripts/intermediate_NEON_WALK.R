@@ -164,27 +164,27 @@ intermediate.directories()
   # 0 obs of a subspecies
 
 # ## JOIN ENVIRONMENTAL & SAMPLING EFFORT DATA (old) 
-#   enviro_data <- read.csv(file = file.path("data",
-#                                            "raw_data",
-#                                            dataset,
-#                                            data_type,
-#                                            folder,
-#                                            "stackedFiles",
-#                                            "fsh_perPass.csv"))
-#   enviro_data <- enviro_data %>% 
-#     select(!c(uid, domainID, passStartTime, passEndTime, boutEndDate, specificConductance,
-#               habitatType, subdominantHabitatType, initialFrequency, initialDutyCycle, initialVoltage,
-#               finalFrequency, finalDutyCycle, finalVoltage, settingsChanged, initialFrequency2, initialDutyCycle2,
-#               initialVoltage2, finalFrequency2, finalDutyCycle2, finalVoltage2, efTime2, settingsChanged2,
-#               netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent, barrierSubReach, dataQF,
-#               remarks, publicationDate, release))
-#   data <- 
-#     data %>% 
-#     merge(enviro_data, by=c("siteID", "eventID", "namedLocation", "passNumber"), all = T) # join enviro data
-#   
-#   data <- data %>% 
-#     filter(!is.na(taxonID)) # drops NAs that were introduced in merge
-#   
+  enviro_data <- read.csv(file = file.path("data",
+                                           "raw_data",
+                                           dataset,
+                                           data_type,
+                                           folder,
+                                           "stackedFiles",
+                                           "fsh_perPass.csv"))
+  enviro_data <- enviro_data %>%
+    select(!c(uid, domainID, passStartTime, passEndTime, boutEndDate, specificConductance,
+              habitatType, subdominantHabitatType, initialFrequency, initialDutyCycle, initialVoltage,
+              finalFrequency, finalDutyCycle, finalVoltage, settingsChanged, initialFrequency2, initialDutyCycle2,
+              initialVoltage2, finalFrequency2, finalDutyCycle2, finalVoltage2, efTime2, settingsChanged2,
+              netIntegrity, netSetTime, netEndTime, netDeploymentTime, netLength, netDepth, targetTaxaPresent, barrierSubReach, dataQF,
+              remarks, publicationDate, release))
+  data <-
+    data %>%
+    merge(enviro_data, by=c("siteID", "eventID", "namedLocation", "passNumber"), all = T) # join enviro data
+
+  data <- data %>%
+    filter(!is.na(taxonID)) # drops NAs that were introduced in merge
+
 ## SAMPLING EFFORT --------------------
   
   # FOR ALL NEON STREAM SITES: 
@@ -209,16 +209,17 @@ intermediate.directories()
                                              "_datasummary.html")))
 
 
-  #at the end of the fish section, we should have data that is DATE, SITE/SUBSITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME (not for NEON stuff), YEAR
+  #at the end of the fish section, we should have data that is DATE, SITE/SUBSITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME (not for NEON stuff), YEAR, EFFORT
   
   fish <- data %>% 
     dplyr::rename(DATE = date,
                   SP_CODE = taxonID,
                   SCI_NAME = scientificName,
                   SIZE = fishTotalLength,
-                  SUBSITE = siteID) %>% 
+                  SUBSITE = siteID,
+                  EFFORT = efTime) %>% 
     mutate(YEAR = year(DATE)) %>% 
-    select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR)
+    select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR, EFFORT)
   
   #PART #2: TEMP ------
   
@@ -295,6 +296,8 @@ intermediate.directories()
             mean_max_temp = mean(mean_max_temp, na.rm = T),
             mean_min_temp = mean(mean_min_temp,na.rm = T)) %>% 
     rename(SUBSITE = siteID) # get variables A, B, C
+
+  temp_final$YEAR <- temp_final$YEAR + 1 # offset year before joining to fish data
   
   #PART #3: DO ------
   
@@ -382,7 +385,9 @@ intermediate.directories()
 #finalize DO 
     
  DO_final <- left_join(daily_DO, annual_DO)
-    
+  
+ DO_final$YEAR <- DO_final$YEAR +1 # offset year before joining to fish data
+
 #finalize environmental data 
 
  enviro_final <- left_join(DO_final, temp_final)
@@ -412,6 +417,3 @@ intermediate.directories()
   plot.speciesaccum(count_check,
                     species_col = "SP_CODE",
                     subsite = F)
-
-
-

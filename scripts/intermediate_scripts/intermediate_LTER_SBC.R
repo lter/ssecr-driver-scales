@@ -262,7 +262,6 @@ rm(data)
 
 ##start here for temp & do if files already download-------
 
-#STOP FOR NOW: Wait to figure out DO and TEMP plans for LTER SITE 
 
 envdata <- read.csv(file = file.path("data",
                                   "raw_data",
@@ -284,6 +283,66 @@ setdiff(unique(fish$SUBSITE), unique(envdata$SUBSITE))
 sort(unique(fish$SUBSITE))
 sort(unique(envdata$SUBSITE))
 
+#I did not subsite by year because there was not a perfect match between site and surface temperature locations in this dataset
+#could add to group by and merge if needed though
+#for each year obtain:
+
+# VARIABLES
+# A) annual average temperature (rational: growing season avg would require identifying growing season at each site)
+# B) annual mean daily max temperature
+# C) annual mean daily min temperature
+
+
+annual_TEMP <- envdata %>% 
+  group_by(YEAR) %>%
+  reframe(annual_avg_TEMP = mean(TEMP, na.rm = T))  #variable A
+
+daily_TEMP <- envdata %>% 
+  group_by(YEAR, DATE) %>% 
+  reframe(mean_max_TEMP = max(TEMP, na.rm = T),
+          mean_min_TEMP = min(TEMP, na.rm = T)) # get daily max & min
+
+daily_TEMP <- daily_TEMP %>% 
+  group_by(YEAR) %>% 
+  reframe(mean_max_TEMP = mean(mean_max_TEMP, na.rm = T),
+          mean_min_TEMP = mean(mean_min_TEMP, na.rm = T))   # variables B & C 
+
+
+temp_final <- left_join(daily_TEMP, annual_TEMP)
+temp_final$YEAR <- temp_final$YEAR + 1 # offset year before joining to fish data
+
+# VARIABLES
+# D) annual average DO (might scratch?)
+# E) annual mean daily DO
+# F) annual mean min DO
+
+
+#for DO on 2013-11-04 DO measurements not there (NaN or INF so remove that date otherwise below code will give infinite value for min do)
+
+annual_DO <- envdata %>% 
+  group_by(YEAR) %>%
+  reframe(annual_avg_DO = mean(DO, na.rm = T))  #variable D
+
+daily_DO <- envdata %>% 
+  group_by(YEAR, DATE) %>% 
+  reframe(mean_daily_DO = mean(DO, na.rm = T),
+          mean_min_DO = min(DO, na.rm = T)) # get daily mean & min
+
+
+daily_DO <- daily_DO %>% 
+  group_by(YEAR) %>% 
+  reframe(mean_daily_DO = mean(mean_daily_DO, na.rm = T),
+          mean_min_DO = mean(mean_min_DO, na.rm = T))   # variables E & F 
+
+#finalize DO
+DO_final <- left_join(daily_DO, annual_DO)
+DO_final$YEAR <- DO_final$YEAR + 1 # offset year before joining to fish data
+
+#finalize environmental data 
+
+enviro_final <- temp_final %>%
+  merge(DO_final, by=c("YEAR"), all = T) # use merge not join--join drops years if temp or DO missing for year
+
 #finalize intermediate data -----
 
 # drop any other irrelevant columns 
@@ -292,13 +351,29 @@ sort(unique(envdata$SUBSITE))
 
 #I'll drop any obvious columns by looking at the data summary output. Here are the things we know that we need: date, species, counts/sizes, survey methods, and any sort of spatial information for now (transect, quadrat, etc). 
 
-data <- data %>% 
+fish <- fish %>% 
   select(!c(GROUP, MOBILITY, 
             GROWTH_MORPH, VIS, SIDE, 
             starts_with("TAXON"),
-            YEAR, MONTH, SURVEY))
+            MONTH, SURVEY))
 
-#Note I threw YEAR and MONTH because we already had a DATE column with this info. We can always mutate these columns later after the data is harmonized. 
+#Read in fish and environmental fish
+
+fish$SITE<-"LTER_SBC"
+
+
+#remove any rows where the date or subsite is missing
+fish<-fish%>%drop_na(c("DATE","SUBSITE"))
+
+
+#convert subsite to factor
+fish$SUBSITE<-as.factor(fish$SUBSITE)
+envdata$SUBSITE<-as.factor(envdata$SUBSITE)
+
+#merge fish and environmental data by year 
+
+intermediate <- left_join(fish, enviro_final, by = c("YEAR"))
+
 
 #Here, you'll want to rename any columns you already fit to have our required column naming conventions
 

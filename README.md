@@ -34,7 +34,7 @@ We will use estimates of temperature and DO effects to evaluate Question 1. Comp
 
 ## Script Explanations
 
-*Coming soon!*
+Intermediate_scripts folder: There is one R script per site that is used to download, combine, and harmonize the relevant fish and environmental dataset(s) from EDI. The intermediate_harmonize script is then used to combine all the datasets from each site.
 
 
 ## Supplementary Resources

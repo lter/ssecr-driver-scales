@@ -196,6 +196,12 @@ fish <- data %>%
 
 rm(data)
 
+#quick look at distribution of counts
+count_check <- data.frame(fish %>% group_by(DATE, SCIENTIFIC_NAME) %>% 
+                            reframe(count=n())) # count for each species for each sampling event 
+hist(count_check$count, breaks = 20) 
+summary(count_check)
+
 #at the end of this data you should have DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME
 
 #PART 2: TEMP & DO ----
@@ -295,17 +301,17 @@ sort(unique(envdata$SUBSITE))
 
 annual_TEMP <- envdata %>% 
   group_by(YEAR) %>%
-  reframe(annual_avg_TEMP = mean(TEMP, na.rm = T))  #variable A
+  reframe(mean_daily_temp = mean(TEMP, na.rm = T))  #variable A
 
-daily_TEMP <- envdata %>% 
+daily_TEMP <- drop_na(envdata) %>% 
   group_by(YEAR, DATE) %>% 
-  reframe(mean_max_TEMP = max(TEMP, na.rm = T),
-          mean_min_TEMP = min(TEMP, na.rm = T)) # get daily max & min
+  reframe(mean_max_temp = max(TEMP, na.rm = T),
+          mean_min_temp = min(TEMP, na.rm = T)) # get daily max & min
 
 daily_TEMP <- daily_TEMP %>% 
   group_by(YEAR) %>% 
-  reframe(mean_max_TEMP = mean(mean_max_TEMP, na.rm = T),
-          mean_min_TEMP = mean(mean_min_TEMP, na.rm = T))   # variables B & C 
+  reframe(mean_max_temp = mean(mean_max_temp, na.rm = T),
+          mean_min_temp = mean(mean_min_temp, na.rm = T))   # variables B & C 
 
 
 temp_final <- left_join(daily_TEMP, annual_TEMP)
@@ -317,13 +323,12 @@ temp_final$YEAR <- temp_final$YEAR + 1 # offset year before joining to fish data
 # F) annual mean min DO
 
 
-#for DO on 2013-11-04 DO measurements not there (NaN or INF so remove that date otherwise below code will give infinite value for min do)
-
 annual_DO <- envdata %>% 
   group_by(YEAR) %>%
   reframe(annual_avg_DO = mean(DO, na.rm = T))  #variable D
 
-daily_DO <- envdata %>% 
+#drop_na needed here because some Na's in do effect minimum calculation
+daily_DO <- drop_na(envdata) %>% 
   group_by(YEAR, DATE) %>% 
   reframe(mean_daily_DO = mean(DO, na.rm = T),
           mean_min_DO = min(DO, na.rm = T)) # get daily mean & min
@@ -345,20 +350,8 @@ enviro_final <- temp_final %>%
 
 #finalize intermediate data -----
 
-# drop any other irrelevant columns 
 
-#I save this for LAST in case there is anything I want to look at or investigate in other columns along the way. 
-
-#I'll drop any obvious columns by looking at the data summary output. Here are the things we know that we need: date, species, counts/sizes, survey methods, and any sort of spatial information for now (transect, quadrat, etc). 
-
-fish <- fish %>% 
-  select(!c(GROUP, MOBILITY, 
-            GROWTH_MORPH, VIS, SIDE, 
-            starts_with("TAXON"),
-            MONTH, SURVEY))
-
-#Read in fish and environmental fish
-
+#add name of overall site for when its added to rest of datasite
 fish$SITE<-"LTER_SBC"
 
 
@@ -366,9 +359,6 @@ fish$SITE<-"LTER_SBC"
 fish<-fish%>%drop_na(c("DATE","SUBSITE"))
 
 
-#convert subsite to factor
-fish$SUBSITE<-as.factor(fish$SUBSITE)
-envdata$SUBSITE<-as.factor(envdata$SUBSITE)
 
 #merge fish and environmental data by year 
 
@@ -379,10 +369,9 @@ intermediate <- left_join(fish, enviro_final, by = c("YEAR"))
 
 intermediate.names()
 
-intermediate <- data %>% 
-  rename(SUBSITE = SITE,
-         SCI_NAME = SCIENTIFIC_NAME) %>% 
-  select(-c(AREA))
+intermediate <- intermediate %>% 
+  rename(SCI_NAME = SCIENTIFIC_NAME)
+ 
 
 #this custom function should do the rest 
 

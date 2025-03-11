@@ -155,6 +155,7 @@ data <- data %>%
 
 #Transect: unique numbers for each site? Dig into further:
 
+unique(data$QUAD)
 data %>% 
   distinct(SITE,TRANSECT) %>% 
   arrange(SITE, TRANSECT) #so not all sites have all transects. Is there a better map we need to reference or is this important? 
@@ -190,8 +191,9 @@ data %>%
        y = "Site")
 
 fish <- data %>% 
-  select(DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME) %>% 
-  rename(SUBSITE = SITE) %>% 
+  select(DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME,AREA) %>% 
+  rename(SUBSITE = SITE,
+         EFFORT=AREA) %>% 
   mutate(YEAR = year(DATE))
 
 rm(data)

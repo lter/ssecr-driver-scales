@@ -33,8 +33,13 @@ harmonized <- list.files(path = file.path("data",
                                            "intermediate_data2"),
                           pattern = "\\.csv$", 
                          full.names = TRUE) %>%
-  purrr::map_dfr(read_csv)  # Reads and binds all csvs
+  set_names() %>% 
+    purrr::map_dfr(read_csv,.id="file_name") %>% # Reads and binds all csvs
+  mutate(file_name=basename(file_name))%>%
+  rename(SITE=file_name)
 
-unique(harmonized$SUBSITE)
+harmonized$SITE<-str_remove(harmonized$SITE,'_intermediate.csv')
+  
+unique(harmonized$SITE)
 
 

@@ -386,6 +386,12 @@ fish <- data %>%
          SP_CODE=taxon_code,
          COMMON_NAME=SPECIESNAME)
 
+rm(data)
+
+#fish from 2019 onwards were measured in cm, need to change those years to mm
+
+fish<-fish %>%
+  mutate(SIZE=ifelse(YEAR>=2019,SIZE*10,SIZE))
 
 #quick look at distribution of counts
 count_check <- data.frame(fish %>% group_by(DATE, SCI_NAME) %>% 

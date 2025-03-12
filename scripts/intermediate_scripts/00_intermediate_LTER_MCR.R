@@ -542,7 +542,7 @@ intermediate <- left_join(fish, enviro_final, by = c("YEAR","reef_type_code"))
 intermediate.names()
 
 intermediate <- intermediate %>% 
-  select(DATE, SUBSITE,SCI_NAME,SIZE, YEAR, EFFORT,, 
+  select(SITE,DATE, SUBSITE,SCI_NAME,SIZE, YEAR, EFFORT,, 
          mean_daily_temp, mean_max_temp, mean_min_temp)
 
 

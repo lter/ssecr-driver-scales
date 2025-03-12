@@ -199,7 +199,7 @@ data <- read.csv(file = file.path("data",
   hist(data$efTime, breaks = 20) 
   
   timeseries <- function(x){length(unique(x))} 
-  tapply(substr(data$date, 1, 7), list(substr(data$eventID, 15, 16)), timeseries) # unique samplings per point
+tapply(substr(data$date, 1, 7), list(substr(data$eventID, 1, 16)), timeseries) # unique samplings
 
   #at the end of the fish section, we should have data that is DATE, SITE/SUBSITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME (not for NEON stuff), YEAR, EFFORT
   

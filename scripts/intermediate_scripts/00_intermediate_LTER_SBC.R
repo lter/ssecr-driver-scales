@@ -204,6 +204,10 @@ count_check <- data.frame(fish %>% group_by(DATE, SCIENTIFIC_NAME) %>%
 hist(count_check$count, breaks = 20) 
 summary(count_check)
 
+#data are in cm but need to be in mm to match other datasets
+
+fish$SIZE<-(fish$SIZE)*10
+
 #at the end of this data you should have DATE, SITE, SP_CODE, SIZE, SCIENTIFIC_NAME, COMMON_NAME
 
 #PART 2: TEMP & DO ----

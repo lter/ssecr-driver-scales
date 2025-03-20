@@ -106,7 +106,6 @@ ggplot(predict_size_do,aes(x=annual_avg_DO, y=response))+
 pop <- data %>% 
   group_by(DATE, EFFORT) %>%
   dplyr::count(SP_CODE) # count of species by date and electrofishing pass
-pop$EFFORT_h <- pop$EFFORT / 3600 # sec to hr
 pop$CPUE <- pop$n / pop$EFFORT_h
 subset <- data %>%
   select(!c(SIZE)) %>%

@@ -16,7 +16,7 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan, neonUtilities)
+                 vegan, neonUtilities, corrplot)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -115,6 +115,62 @@ final_drop_table #looks like right now only one of concern is NEON_CRAM.
 NEON_data <- NEON_data %>% 
   filter(!SCI_NAME %in% ranks$scientificName)
 
+NEON_data %>% 
+  drop_na(mean_daily_temp) %>% 
+  distinct(SITE)
 
-# VIZ LOOPS ----- 
+# VIZ LOOP DEMOS ----- 
+
+#create demo site just to make sure visuals work 
+
+### Correlation matrix of predictor variables -----
+
+demo <- NEON_data %>% 
+  filter(SITE == "NEON_ARIK")
+
+## Correlation matrix of all predictor variables 
+
+predictor_cor <- demo %>% 
+  select(SIZE, mean_daily_DO:mean_min_temp) %>% 
+  cor(use = "complete.obs")
+
+corrplot(predictor_cor,
+         method = "color", 
+         addCoef.col="black", 
+         order = "AOE", 
+         number.cex=.75,
+         type = "upper",
+         tl.cex = .75,
+         tl.col = "black",
+         diag = F,
+         tl.srt = 45)
+
+### Size ~ Year colored by species -----
+
+demo %>% 
+ggplot(aes(x=YEAR,y=SIZE, color = SCI_NAME))+
+  geom_point(alpha = .25) +
+  theme_cowplot() +
+  theme(legend.position = "none")
+
+### mean daily temp ~ year -----
+
+demo %>% 
+ggplot(aes(x=YEAR, y=mean_daily_temp))+
+  geom_point(color="darkred") +
+  ylab("MEAN DAILY TEMP") +
+  scale_x_continuous(labels = function(x) x -1) +
+  theme_cowplot()
+
+### average annual DO ~ year -----
+
+demo %>% 
+ggplot(aes(x=YEAR, y=annual_avg_DO))+
+  geom_point(color="navy") + 
+  ylab("ANNUAL AVG. DO") +
+  scale_x_continuous(labels = function(x) x -1) +
+  theme_cowplot()
+
+
+
 

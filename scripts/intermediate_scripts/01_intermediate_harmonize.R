@@ -110,15 +110,68 @@ final_drop_table <- total_rows_site %>%
 
 final_drop_table #looks like right now only one of concern is NEON_CRAM.
 
-## DROP DATA ------
+## DROP DATA BASED ON TAXON FILTERING ------
 
 NEON_data <- NEON_data %>% 
   filter(!SCI_NAME %in% ranks$scientificName)
 
-NEON_data %>% 
-  drop_na(mean_daily_temp) %>% 
-  distinct(SITE)
+## "RARE" SPECIES ------
 
+#at each site, figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
+
+#one way to visualize this is with a matrix 
+
+species_counts <- as.data.frame(tapply(NEON_data$YEAR, list(NEON_data$SCI_NAME, NEON_data$SITE), timeseries))
+
+NEON_data %>% 
+  group_by(SITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) #this gives us how many years each species appears in the data 
+
+rare_drops <- NEON_data %>% 
+  group_by(SITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>% 
+  filter(n_years < 3) %>% 
+  select(!n_years) %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME))
+
+#How much data would that be dropping?
+
+NEON_data %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops$combo) %>% 
+  summarise(proportion = (nrow(.)/nrow(NEON_data))*100) #in total it's only about 0.332% of our data that we would have to drop, but what about at each SITE?
+
+#Investigate same question but do proportions by site 
+
+total_rows_rare <- NEON_data %>% 
+  group_by(SITE) %>% 
+  count() %>% 
+  rename(total_rows = `n`)
+
+drop_rows_rare <- NEON_data %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops$combo) %>% 
+  group_by(SITE) %>% 
+  count() %>% 
+  rename(drop = `n`)
+
+#this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
+final_drop_table_rare <- total_rows_rare %>% 
+  left_join(drop_rows_rare,
+            by = "SITE") %>% 
+  mutate(proportion = (drop/total_rows)*100) %>% 
+  arrange(desc(proportion))
+
+final_drop_table_rare #looks like right now only one of concern is NEON_POSE.
+
+
+##DROP DATA BASED ON SPECIES FREQUENCY ----
+
+NEON_data <- NEON_data %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  filter(!combo %in% rare_drops$combo) %>% 
+  select(!combo)
+  
 # VIZ LOOP DEMOS ----- 
 
 #create demo site just to make sure visuals work 

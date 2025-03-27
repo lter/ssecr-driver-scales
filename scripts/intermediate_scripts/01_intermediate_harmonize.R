@@ -16,7 +16,7 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan, neonUtilities, corrplot)
+                 vegan, neonUtilities, corrplot, emmeans)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -224,6 +224,87 @@ ggplot(aes(x=YEAR, y=annual_avg_DO))+
   scale_x_continuous(labels = function(x) x -1) +
   theme_cowplot()
 
+### individual level ~ temperature ------
 
+demo %>% 
+ggplot(aes(x=mean_daily_temp, y=SIZE))+
+  geom_point(aes(color = SCI_NAME), alpha = .25) +
+  geom_smooth(aes(color = SCI_NAME), method=lm,se=F)+
+  geom_smooth(color = "black", linetype = "dashed", method=lm,se=F)+
+  xlab("MEAN DAILY TEMP") +
+  theme_cowplot() +
+  theme(legend.position = "none")
 
+### individual level ~ temperature model accounting for DO ------
 
+do_temp_size_model <- lm(log(SIZE) ~ mean_daily_temp * 
+                           annual_avg_DO, demo)
+
+predict_size_temp <- data.frame(emmeans(do_temp_size_model, 
+                                        ~mean_daily_temp * annual_avg_DO, 
+                                        at=list(mean_daily_temp=c(15.5, 16, 16.5,17, 17.5))), 
+                                type = "response")
+
+ggplot(predict_size_temp,aes(x=mean_daily_temp, y=emmean))+
+  geom_line(color = "darkred", linewidth =1) +
+  geom_ribbon(data = predict_size_temp, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "darkred") +
+  geom_ribbon(data = predict_size_temp, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "darkred") +
+  xlab("MEAN DAILY TEMP") +
+  ylab("SIZE") +
+  theme_cowplot() +
+  theme(legend.position = "none")
+
+### individual level ~ DO ------
+
+demo %>% 
+ggplot(aes(x=annual_avg_DO, y=SIZE))+
+  geom_point(aes(color = SCI_NAME), alpha = .25)+
+  geom_smooth(aes(color = SCI_NAME), method=lm,se=F)+
+  geom_smooth(color = "black", linetype = "dashed", method=lm,se=F)+
+  xlab("ANNUAL AVG. DO") +
+  theme_cowplot() +
+  theme(legend.position = "none")
+
+### individual level ~ DO model accounting for temperature ------
+
+predict_size_do <- data.frame(emmeans(do_temp_size_model, ~mean_daily_temp * annual_avg_DO, 
+                                      at=list(annual_avg_DO=c(8.5, 9, 9.5, 10, 10.5)), 
+                                      type = "response"))
+
+ggplot(predict_size_do,aes(x=annual_avg_DO, y=response))+
+  geom_line(color = "navy", linewidth =1) +
+  geom_ribbon(data = predict_size_do, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "navy") +
+  geom_ribbon(data = predict_size_do, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "navy") +
+  xlab("ANNUAL AVG. DO") +
+  ylab("SIZE") +
+  theme_cowplot() +
+  theme(legend.position = "none")
+
+### population level skip for now until effort is more ironed out 
+
+##all of those graphs work so now build into a loop 
+
+NEON_data %>% 
+  select(SITE, SIZE, mean_daily_DO:mean_min_temp) %>% 
+  group_by(SITE) %>% 
+  summarise(across(everything(), ~sum(is.na(.))))
+
+for(site in unique(NEON_data$SITE)) {
+  
+  predictor_cor <- NEON_data %>% 
+    filter(SITE == site) %>% 
+    select(SIZE, mean_daily_DO:mean_min_temp) %>% 
+    cor(use = "complete.obs")
+  
+  corrplot(predictor_cor,
+           method = "color", 
+           addCoef.col="black", 
+           order = "AOE", 
+           number.cex=.75,
+           type = "upper",
+           tl.cex = .75,
+           tl.col = "black",
+           diag = F,
+           tl.srt = 45)
+  
+}

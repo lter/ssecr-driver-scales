@@ -71,7 +71,7 @@ vignettes/*.pdf
 *.geojson
 
 # Other file types
-*.pdf
+#*.pdf taking out pdf for now so that we can upload site plots : AC 4/3/2025
 *.zip
 
 # Data file types

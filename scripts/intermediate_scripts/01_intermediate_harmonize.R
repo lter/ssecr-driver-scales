@@ -165,7 +165,7 @@ final_drop_table_rare <- total_rows_rare %>%
 final_drop_table_rare #looks like right now only one of concern is NEON_POSE.
 
 
-##DROP DATA BASED ON SPECIES FREQUENCY ----
+##DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
 
 NEON_data <- NEON_data %>% 
   mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
@@ -289,6 +289,7 @@ NEON_data %>%
   group_by(SITE) %>% 
   summarise(across(everything(), ~sum(is.na(.))))
 
+
 for(site in unique(NEON_data$SITE)) {
   
   predictor_cor <- NEON_data %>% 
@@ -305,6 +306,7 @@ for(site in unique(NEON_data$SITE)) {
            tl.cex = .75,
            tl.col = "black",
            diag = F,
-           tl.srt = 45)
+           tl.srt = 45,
+           title = paste0("Correlation matrix for ",site))
   
 }

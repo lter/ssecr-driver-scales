@@ -290,7 +290,7 @@ NEON_data %>%
   summarise(across(everything(), ~sum(is.na(.))))
 
 
-#MAKE PDF LOOP ----
+#MAKE PDF LOOP ---- #testing
 
 sites <- unique(NEON_data$SITE)
 

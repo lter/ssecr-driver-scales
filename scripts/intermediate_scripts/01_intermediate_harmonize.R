@@ -16,7 +16,7 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan, neonUtilities, corrplot, emmeans)
+                 vegan, neonUtilities, ggcorrplot, emmeans, ggpubr, gridExtra)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -290,23 +290,47 @@ NEON_data %>%
   summarise(across(everything(), ~sum(is.na(.))))
 
 
-for(site in unique(NEON_data$SITE)) {
+#MAKE PDF LOOP ----
+
+sites <- unique(NEON_data$SITE)
+
+for(i in seq_along(sites)) {
   
-  predictor_cor <- NEON_data %>% 
-    filter(SITE == site) %>% 
-    select(SIZE, mean_daily_DO:mean_min_temp) %>% 
+  predictor_cor <- NEON_data %>%
+    filter(SITE == sites[i]) %>%
+    select(SIZE, mean_daily_DO:mean_min_temp) %>%
     cor(use = "complete.obs")
   
-  corrplot(predictor_cor,
-           method = "color", 
-           addCoef.col="black", 
-           order = "AOE", 
-           number.cex=.75,
-           type = "upper",
-           tl.cex = .75,
-           tl.col = "black",
-           diag = F,
-           tl.srt = 45,
-           title = paste0("Correlation matrix for ",site))
+  # Convert correlation matrix into a ggplot object
+  plot1 <- ggcorrplot(
+    predictor_cor,
+    hc.order = TRUE,
+    type = "lower",
+    outline.color = "white",
+    ggtheme = ggplot2::theme_gray,
+    colors = c("#6D9EC1", "white", "#E46726"), 
+    lab = TRUE
+  )
+  
+  ### Size ~ Year colored by species -----
+  plot2 <- NEON_data %>% 
+    filter(SITE == sites[i]) %>% 
+    ggplot(aes(x = YEAR, y = SIZE, color = SCI_NAME)) +
+    geom_point(alpha = 0.25) +
+    theme_cowplot() +
+    theme(legend.position = "none") +
+    labs(title = paste0("Size versus year at site ", sites[i]))
+  
+  # Arrange both plots using ggarrange()
+  
+  pdf(file = paste0("viz/", sites[i],"_plots.pdf"),
+      paper = "a4")
+  print(plot1)
+  print(plot2)
+  
+  dev.off()
   
 }
+
+
+

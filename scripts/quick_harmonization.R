@@ -42,18 +42,23 @@ full_dat2 <- full_dat2 %>%
 
 # getting population counts
 pop_dat <- full_dat2 %>%
-  distinct(Site1, DATE, DO_scaled, temp_scaled) %>%
+  distinct(Site1, DATE, DO_scaled, temp_scaled, EFFORT) %>%
   crossing(distinct(full_dat2, SCI_NAME)) %>%
   left_join(full_dat2 %>%
-              count(Site1, DATE, SCI_NAME, name = "count"), 
-            by = c("Site1", "DATE", "SCI_NAME")) %>%
-  mutate(count = replace_na(count, 0))
+              count(Site1, DATE, SCI_NAME, EFFORT, name = "count"), 
+            by = c("Site1", "DATE", "SCI_NAME", "EFFORT")) %>%
+  mutate(count = replace_na(count, 0)) %>%
+  mutate(CPUE = count/EFFORT) %>%
+  ungroup() %>%
+  group_by(Site1, DATE, DO_scaled, temp_scaled, SCI_NAME) %>%
+  summarise(count = sum(count), 
+            CPUE = sum(CPUE))
 
 # getting community metrics
 com_dat <- pop_dat %>%
   group_by(Site1, DATE, DO_scaled, temp_scaled) %>%
-  summarise(diversity = diversity(count), 
-            total = sum(count))
+  summarise(diversity = diversity(CPUE), 
+            total = sum(CPUE))
   
 # saving
 saveRDS(full_dat2, file.path("data", "ind_dat.RDS"))

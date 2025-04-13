@@ -171,7 +171,39 @@ NEON_data <- NEON_data %>%
   mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
   filter(!combo %in% rare_drops$combo) %>% 
   select(!combo)
-  
+
+##APRIL UPDATE: DROP FROM SP'S GOOGLE DRIVE NOTES ----
+
+#These are sites that Sierra picked out to drop based on environmental variables not being available for > 5 years 
+
+site_drops <- c("NEON_CARI",
+                "NEON_PRLA",
+                "NEON_PRPO",
+                "NEON_CUPE",
+                "NEON_GUIL",
+                "NEON_LIRO",
+                "NEON_TOOK")
+
+NEON_data <- NEON_data %>% 
+  filter(!(SITE %in% site_drops))
+
+#these all work, but now the issue is the PDF loops don't all work because it can't loop the same plots across each plot. Skip for now and work on later. 
+
+#there are also a couple sites where we're only dropping some of the variables: 
+
+#drop DO from NEON CRAM AND NEON LECO
+# NEON_data <- NEON_data %>%
+#   mutate(across(contains("DO"),
+#                 ~ if_else(SITE %in% c("NEON_CRAM", "NEON_LECO"), NA_real_, .)))
+# 
+# #drop temp from NEON KING 
+# 
+# NEON_data <- NEON_data %>%
+#   mutate(across(contains("temp"),
+#                 ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
+
+
+
 # VIZ LOOP DEMOS ----- 
 
 #create demo site just to make sure visuals work 
@@ -363,50 +395,61 @@ for(i in seq_along(sites)) {
     labs(title = paste0("Size versus mean daily water temp at site ", sites[i])) +
     theme(plot.title = element_text(hjust = 0.5))
   
-  # ### individual level ~ temperature model accounting for DO ------
-  # 
-  # do_temp_size_model <- lm(log(SIZE) ~ mean_daily_temp * 
-  #                            annual_avg_DO, demo)
-  # 
-  # predict_size_temp <- data.frame(emmeans(do_temp_size_model, 
-  #                                         ~mean_daily_temp * annual_avg_DO, 
-  #                                         at=list(mean_daily_temp=c(15.5, 16, 16.5,17, 17.5))), 
-  #                                 type = "response")
-  # 
-  # ggplot(predict_size_temp,aes(x=mean_daily_temp, y=emmean))+
-  #   geom_line(color = "darkred", linewidth =1) +
-  #   geom_ribbon(data = predict_size_temp, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "darkred") +
-  #   geom_ribbon(data = predict_size_temp, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "darkred") +
-  #   xlab("MEAN DAILY TEMP") +
-  #   ylab("SIZE") +
-  #   theme_cowplot() +
-  #   theme(legend.position = "none")
+  ### individual level ~ temperature model accounting for DO ------
+
+  do_temp_size_model <- lm(log(SIZE) ~ mean_daily_temp * annual_avg_DO, 
+                           data = 
+                             NEON_data[NEON_data$SITE == sites[i], ])
+
+  predict_size_temp <- data.frame(emmeans(do_temp_size_model,
+                                          ~mean_daily_temp * annual_avg_DO,
+                                          at=list(mean_daily_temp=c(15.5, 16, 16.5,17, 17.5))),
+                                  type = "response")
+
+  if (all(c("lower.CL", "upper.CL") %in% names(predict_size_temp))) {
+    plot6 <- ggplot(predict_size_temp, aes(x = mean_daily_temp, y = emmean)) +
+      geom_line(color = "darkred", linewidth = 1) +
+      geom_ribbon(aes(ymin = lower.CL, ymax = upper.CL), alpha = 0.25, fill = "darkred") +
+      xlab("MEAN DAILY TEMP") +
+      ylab("SIZE") +
+      theme_cowplot() +
+      theme(legend.position = "none") +
+      labs(title = paste0("Size vs. temp accounting for DO at site ", sites[i]))
+  } else {
+    message("Skipping plot for site ", sites[i], ": CI could not be estimated.")
+  }
   # 
   # ### individual level ~ DO ------
-  # 
-  # demo %>% 
-  #   ggplot(aes(x=annual_avg_DO, y=SIZE))+
-  #   geom_point(aes(color = SCI_NAME), alpha = .25)+
-  #   geom_smooth(aes(color = SCI_NAME), method=lm,se=F)+
-  #   geom_smooth(color = "black", linetype = "dashed", method=lm,se=F)+
-  #   xlab("ANNUAL AVG. DO") +
-  #   theme_cowplot() +
-  #   theme(legend.position = "none")
-  # 
-  # ### individual level ~ DO model accounting for temperature ------
-  # 
-  # predict_size_do <- data.frame(emmeans(do_temp_size_model, ~mean_daily_temp * annual_avg_DO, 
-  #                                       at=list(annual_avg_DO=c(8.5, 9, 9.5, 10, 10.5)), 
-  #                                       type = "response"))
-  # 
-  # ggplot(predict_size_do,aes(x=annual_avg_DO, y=response))+
-  #   geom_line(color = "navy", linewidth =1) +
-  #   geom_ribbon(data = predict_size_do, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "navy") +
-  #   geom_ribbon(data = predict_size_do, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "navy") +
-  #   xlab("ANNUAL AVG. DO") +
-  #   ylab("SIZE") +
-  #   theme_cowplot() +
-  #   theme(legend.position = "none")
+
+  plot7 <- NEON_data %>% 
+    filter(SITE == sites[i]) %>%
+    ggplot(aes(x=annual_avg_DO, y=SIZE))+
+    geom_point(aes(color = SCI_NAME), alpha = .25)+
+    geom_smooth(aes(color = SCI_NAME), method=lm,se=F)+
+    geom_smooth(color = "black", linetype = "dashed", method=lm,se=F)+
+    xlab("ANNUAL AVG. DO") +
+    theme_cowplot() +
+    theme(legend.position = "none") +
+    labs(title = paste0("Size verus DO at site ", sites[i]))
+
+  ### individual level ~ DO model accounting for temperature ------
+
+  predict_size_do <- data.frame(emmeans(do_temp_size_model, ~mean_daily_temp * annual_avg_DO,
+                                        at=list(annual_avg_DO=c(8.5, 9, 9.5, 10, 10.5)),
+                                        type = "response"))
+  
+  if (all(c("lower.CL", "upper.CL") %in% names(predict_size_temp))) {
+  plot8 <- ggplot(predict_size_do,aes(x=annual_avg_DO, y=response))+
+    geom_line(color = "navy", linewidth =1) +
+    geom_ribbon(data = predict_size_do, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "navy") +
+    geom_ribbon(data = predict_size_do, aes(ymin=lower.CL, ymax=upper.CL), alpha = .25, fill = "navy") +
+    xlab("ANNUAL AVG. DO") +
+    ylab("SIZE") +
+    theme_cowplot() +
+    theme(legend.position = "none") +
+    labs(title = paste0("Size vs. DO accounting for temp at site ", sites[i]))   } else {
+      message("Skipping plot for site ", sites[i], ": CI could not be estimated.")
+    }
   
   # Arrange both plots using ggarrange()
   
@@ -417,6 +460,9 @@ for(i in seq_along(sites)) {
   print(plot3)
   print(plot4)
   print(plot5)
+  print(plot6)
+  print(plot7)
+  print(plot8)
   
   dev.off()
   

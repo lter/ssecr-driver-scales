@@ -331,7 +331,7 @@ for(i in seq_along(sites)) {
   predictor_cor <- NEON_data %>%
     filter(SITE == sites[i]) %>%
     select(SIZE, mean_daily_DO:mean_min_temp) %>%
-    cor(use = "complete.obs")
+    cor()
   
   ### Convert correlation matrix into a ggplot object ----
   plot1 <- ggcorrplot(

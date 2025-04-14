@@ -39,7 +39,10 @@ totC %>%
   spread_draws(beta_temp, beta_DO) %>%
   pivot_longer(cols = 4:5, names_to = "var", values_to = "val") %>%
   group_by(var) %>%
-  summarise(PD = sum(val > 0) / nrow(.))
+  summarise(med = median(val), 
+            low = quantile(val, 0.025), 
+            up = quantile(val, 0.975),
+            PD = sum(val > 0)/n())
 
 # Plotting effects on total CPUE
 totC %>%
@@ -52,7 +55,8 @@ totC %>%
   ylab("Effect on Total CPUE") + 
   theme(legend.position = "none") + 
   geom_hline(yintercept = 0, linetype = "dashed")
-
+ggsave(file.path("PDFs","Total_Coefs.png"), 
+       width = 10, height = 6, units = "in")
 # refresher on diversity data
 ggplot(com_dat2, aes(x = temp_scaled, y = diversity, 
                      color = Site1)) + 
@@ -69,7 +73,10 @@ divC %>%
   spread_draws(beta_temp, beta_DO) %>%
   pivot_longer(cols = 4:5, names_to = "var", values_to = "val") %>%
   group_by(var) %>%
-  summarise(PD = sum(val > 0) / nrow(.))
+  summarise(med = median(val), 
+            low = quantile(val, 0.025), 
+            up = quantile(val, 0.975),
+            PD = sum(val > 0)/n())
 
 # Plotting effects on diversity
 divC %>%
@@ -82,3 +89,5 @@ divC %>%
   ylab("Effect on Diversity") + 
   theme(legend.position = "none") + 
   geom_hline(yintercept = 0, linetype = "dashed")
+ggsave(file.path("PDFs","Diversity_Coefs.png"), 
+       width = 10, height = 6, units = "in")

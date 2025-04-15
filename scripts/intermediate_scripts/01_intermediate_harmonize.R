@@ -48,10 +48,14 @@ taxon <- read.csv(file = file.path("data",
 
 taxon <-  taxon %>% 
   select(taxonID, acceptedTaxonID, scientificName, vernacularName, taxonRank)
-  
-## CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
 
-#filter only NEON for now 
+#bring in the LTER taxon list 
+
+
+  
+## STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
+
+#filter only NEON 
 
 NEON_data <- harmonized %>% 
   filter(grepl('NEON', SITE))
@@ -64,6 +68,21 @@ setdiff(NEON_data$SCI_NAME,
         taxon$scientificName) #all scientific names match
 
 setdiff(NEON_data$SP_CODE,
+        taxon$acceptedTaxonID) #all codes match 
+
+#filter only LTER
+
+LTER_data <- harmonized %>% 
+  filter(grepl('LTER', SITE))
+
+#check it picked up only NEON sites and first check for obvious mismatches or typos
+
+unique(LTER_data$SITE)
+
+setdiff(LTER_data$SCI_NAME,
+        taxon$scientificName) #all scientific names match
+
+setdiff(LTER_data$SP_CODE,
         taxon$acceptedTaxonID) #all codes match 
 
 #now check our data for any fish not at a species or subspecies level - in the taxonomic guide this will be helpful to check the taxonRank.
@@ -186,6 +205,10 @@ site_drops <- c("NEON_CARI",
 
 NEON_data <- NEON_data %>% 
   filter(!(SITE %in% site_drops))
+
+#FINAL HARMONIZATION ----
+
+final_data <- NEON_data
 
 #these all work, but now the issue is the PDF loops don't all work because it can't loop the same plots across each plot. Skip for now and work on later. 
 

@@ -26,7 +26,7 @@ source(file = file.path("scripts",
 
 ## LOAD DATA ----
 
-#First, download the entire clean intermediate_data folder on Google Drive. For now this is just called "intermediate_data2". 
+#First, download the entire clean intermediate_data folder on Google Drive. For now this is just called "intermediate_data". 
 
 harmonized <- list.files(path = file.path("data", 
                                            "intermediate_data"),
@@ -40,6 +40,12 @@ harmonized <- list.files(path = file.path("data",
 harmonized$SITE<-str_remove(harmonized$SITE,'_intermediate.csv')
   
 unique(harmonized$SITE)
+
+#latest update to sites is that we are splitting up the MCR and SBC sites for LTER. 
+
+harmonized %>% 
+  (SUBSITE = case_when(SITE == "",
+                       .default = SITE))
 
 #Bring in taxon list (first from NEON then can append LTER in later)
 

@@ -42,7 +42,6 @@ harmonized$SITE<-str_remove(harmonized$SITE,'_intermediate.csv')
 unique(harmonized$SITE)
 
 #latest update to sites is that we are splitting up the MCR and SBC sites for LTER. 
-
 harmonized <- harmonized %>%
   mutate(MIDSITE = case_when(
     str_detect(SUBSITE, "Backreef") ~ "LTER_MCR_Backreef",
@@ -52,6 +51,7 @@ harmonized <- harmonized %>%
   relocate(MIDSITE, .after = SITE)
 
 unique(harmonized$MIDSITE)
+
 
 #Bring in taxon list (first from NEON then can append LTER in later)
 
@@ -174,8 +174,7 @@ final_drop_table_rare <- total_rows_rare %>%
   mutate(proportion = (drop/total_rows)*100) %>% 
   arrange(desc(proportion))
 
-final_drop_table_rare #looks like right now only one of concern is NEON_POSE.
-
+final_drop_table_rare #looks like right now only one of concern is NEON_POSE. By concern what we meean is WHEN we drop the data, that amount of data is what is going to be dropped.
 
 ## NEON STEP 5: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
 
@@ -215,17 +214,17 @@ NEON_data <- NEON_data %>%
                 ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
 
 
+#FINAL JOINT HARMONIZATION ----
+
+NEON_harmonized <- NEON_data
+
 #save as Rds to use in model scripts and PDF viz
 
 saveRDS(NEON_harmonized,
         file = file.path("data",
                          "NEON_harmonized.Rds"))
 
-#FINAL JOINT HARMONIZATION ----
-
-NEON_harmonized <- NEON_data
-
-## LTER STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
+## LTER STEP 1: READ IN TAXON LISTS ---- 
 
 #filter only LTER
 
@@ -242,14 +241,15 @@ MCR_taxon <- read.csv(file = file.path("data",
 MCR_taxon <- MCR_taxon %>% 
   select(speciesbinomial, commonname) %>% 
   rename(COMMON_NAME = commonname,
-         SCI_NAME = speciesbinomial)
+         SCI_NAME = speciesbinomial) %>% 
+  add_column(ORIGIN = "MCR")
 
 #NTL site (got this from Zach)
 
 NTL_taxon <- read.csv(file = file.path("data",
                                        "NTL_taxon.csv"))
 
-#need to change the string structure of all of these latin names. right now it's lowercase_lowercase and we need it to be "Uppercase lowercase"
+#need to change the string structure of all of these latin names. right now it's lowercase_lowercase and we need it to be "Uppercase lowercase". Update: for common name in order to match the NTL data we want all uppercase, no spaces. 
 
 NTL_taxon <- NTL_taxon %>% 
   select(!spp_code) %>% 
@@ -257,7 +257,10 @@ NTL_taxon <- NTL_taxon %>%
          SCI_NAME = latin_name) %>% 
   mutate(SCI_NAME = str_replace_all(SCI_NAME, "_", " ") %>%
            str_to_lower() %>%
-           str_to_title())
+           str_to_title()) %>% 
+  mutate(COMMON_NAME = str_replace_all(COMMON_NAME, "_", "") %>%
+           str_to_upper()) %>% 
+  add_column(ORIGIN = "NTL")
 
 #SBC site (got this from online metadata)
 
@@ -265,7 +268,8 @@ SBC_taxon <- read.csv(file = file.path("data",
                                        "SBC_LTER_species.csv")) %>% 
   select(SCIENTIFIC_NAME,
          COMMON_NAME) %>% 
-  rename(SCI_NAME = SCIENTIFIC_NAME)
+  rename(SCI_NAME = SCIENTIFIC_NAME) %>% 
+  add_column(ORIGIN = "SBC")
 
 #now join all three together 
 
@@ -273,11 +277,41 @@ LTER_taxon <- rbind(SBC_taxon,
       MCR_taxon,
       NTL_taxon)
 
+LTER_taxon <- distinct(LTER_taxon)
+
 #now do a look at differences in taxon
 
 setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #85 differences to take care of - woof 
 
-unique(LTER_data$SCI_NAME)
+## LTER STEP 2: COMMON NAMES AT LTER NTL SITE -----
+
+  #Note this is a slightly different step compared to NEON because at LTER there are no scientific names, only common. So we'll have to merge those first, then look for difference as the next taxonomic step.
+  
+  #first take out all NTL data (we'll add it back in once it's cleaned)
+  
+  LTER_NTL <- LTER_data %>% 
+  filter(MIDSITE == "LTER_NTL")
+
+#take out NTL here and thne rbind() later 
+LTER_data <- LTER_data %>% 
+  filter(MIDSITE != "LTER_NTL")
+
+#now let's take care of cleaning NTL first 
+
+LTER_NTL <- LTER_NTL %>% 
+  select(-SCI_NAME) %>%  # Drop the original SCI_NAME
+  left_join(LTER_taxon %>% 
+              select(COMMON_NAME, SCI_NAME), by = "COMMON_NAME") %>%
+  relocate(SCI_NAME, .before = COMMON_NAME)
+
+#now we can add the LTER_NTL data back into the LTER_data! 
+
+LTER_data <- LTER_data %>% 
+  bind_rows(LTER_NTL)
+
+#done with getting all the names at least in the right order!~ 
+
+##LTER STEP 3: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
 
 #how much data at each site are unidentified species? 
 
@@ -299,7 +333,7 @@ LTER_data <- LTER_data %>%
 
 setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #drops it down to 49 differences 
 
-## LTER STEP 2: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
+## LTER STEP 4: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
 
 #pull our data that does not have a species or subspecies taxon rank
 
@@ -369,7 +403,127 @@ LTER_data <- LTER_data %>%
 
 setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #drops it down to 44 differences 
 
-## LTER STEP 3: COMMON NAMES AT LTER NTL SITE -----
+## LTER STEP 5: "RARE" SPECIES ------
+
+#at each site, figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
+
+#one way to visualize this is with a matrix 
+
+species_counts <- as.data.frame(tapply(LTER_data$YEAR, list(LTER_data$SCI_NAME, LTER_data$SITE), timeseries))
+
+LTER_data %>% 
+  group_by(SITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) #this gives us how many years each species appears in the data 
+
+rare_drops_LTER <- LTER_data %>% 
+  group_by(SITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>% 
+  filter(n_years < 3) %>% 
+  select(!n_years) %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME))
+
+#How much data would that be dropping?
+
+LTER_data %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops_LTER$combo) %>% 
+  summarise(proportion = (nrow(.)/nrow(LTER_data))*100) #in total it's only about 0.279% of our data that we would have to drop, but what about at each SITE?
+
+#Investigate same question but do proportions by site 
+
+total_rows_rare_LTER <- LTER_data %>% 
+  group_by(SITE) %>% 
+  count() %>% 
+  rename(total_rows = `n`)
+
+drop_rows_rare_LTER <- LTER_data %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops_LTER$combo) %>% 
+  group_by(SITE) %>% 
+  count() %>% 
+  rename(drop = `n`)
+
+#this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
+final_drop_table_rare_LTER <- total_rows_rare_LTER %>% 
+  left_join(drop_rows_rare_LTER,
+            by = "SITE") %>% 
+  mutate(proportion = (drop/total_rows)*100) %>% 
+  arrange(desc(proportion))
+
+final_drop_table_rare_LTER #no red flags! 
+
+#drop the rare species 
+
+## LTER STEP 6: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
+
+LTER_data <- LTER_data %>% 
+  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  filter(!combo %in% rare_drops_LTER$combo) %>% 
+  select(!combo)
+
+#now let's see where we're at:
+
+setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #down to 20 differences!!!
+
+##LTER STEP 7: INVESTIGATING MISC. DIFFERENCES -----
+
+#character strings of misc. diff. sci names 
+
+misc <- setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME)
+
+#let's see what sites they're coming from: 
+
+LTER_data %>% 
+  filter(SCI_NAME %in% misc) %>%
+  distinct(MIDSITE) #interesting only issues with MCR and VCR 
+
+#"Acanthurus nigroris"is a blue lined surgeonfish - the other sci name that matches the data is "Acanthurus bleekeri"
+
+LTER_data$SCI_NAME[which(LTER_data$SCI_NAME == "Acanthurus nigroris")] <- "Acanthurus bleekeri"
+
+#"Hyporhamphus meeki" is MISSING from the taxon list but it is a valid species.
+
+#"Anchoa mitchilli" is a Bay Anchovy (the only anchovy on the taxon list for whatever reason is the Indian Anchovy). Keep this species, it is valid. 
+
+#"Centropristis striata" is a Black Sea Bass - valid species, just not in taxon list for SBC.
+
+#""Micropogonias undulatus" is the Atlantic Croaker and is a valid species - not on VCR's taxon list. 
+
+#"Gobiidae" is a family of gobies - will need to drop since not specific enough 
+
+LTER_data <- LTER_data %>% 
+  filter(SCI_NAME != "Gobiidae")
+
+#"Eucinostomus argenteus" is a Silver Mojarra - valid species. Not on VCR's taxon list
+
+#"Orthopristis chrysoptera" valid species (pigfish). Not in VCR's species list 
+
+#"Lagodon rhomboides" Pinfish is a valid species. Not on VCR's species list.
+
+#"Hippocampus erectus" is a seahorse - valid species not on VCR's list.
+
+#"Archosargus probatocephalus" is Sheepshead - a valid species just not on VCR's list. 
+
+#Bairdiella chrysoura is a silver perch - valid just not in VCR's list.
+
+#"Menidia menidia" is Atlantic silverside - valid just on on VCR's list
+
+#"Leiostomus xanthurus" is a spot/spot croaker - not on VCR list 
+
+#"Chilomycterus schoepfii" is burrfish - valid just not on VCR list
+
+#Mugilidae - family of fish so drop 
+
+LTER_data <- LTER_data %>% 
+  filter(SCI_NAME != "Mugilidae")
+
+#"Paralichthys dentatus" 
 
 
-#Note this is a slightly different step compared to NEON because at LTER there are no scientific names, only common. So we'll have to merge those first, then look for difference as the next taxonomic step.
+
+
+
+
+
+
+

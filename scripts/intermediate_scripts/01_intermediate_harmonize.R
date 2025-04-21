@@ -214,7 +214,7 @@ NEON_data <- NEON_data %>%
                 ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
 
 
-#FINAL JOINT HARMONIZATION ----
+#FINAL NEON JOINT HARMONIZATION ----
 
 NEON_harmonized <- NEON_data
 
@@ -517,13 +517,47 @@ LTER_data <- LTER_data %>%
 LTER_data <- LTER_data %>% 
   filter(SCI_NAME != "Mugilidae")
 
-#"Paralichthys dentatus" 
+#"Paralichthys dentatus" is a Summer flounder just not on VCR's species list 
 
+#"Tautoga onitis" is a Tautog just not on VCR's species list 
 
+#Syngnathus is the family of pipefish - drop 
 
+LTER_data <- LTER_data %>% 
+  filter(SCI_NAME != "Syngnathus")
 
+#"Teleostei"
 
+#this is just the Latin group for fish - which rows have this?
 
+LTER_data %>% 
+  filter(SCI_NAME == "Teleostei")
 
+#this was VCR's way of marking unidentified fish! Drop. 
 
+LTER_data <- LTER_data %>% 
+  filter(SCI_NAME != "Teleostei")
+
+#should be the last one! 
+
+#FINAL LTER JOINT HARMONIZATION ----
+
+LTER_harmonized <- LTER_data
+
+#save as Rds to use in model scripts and PDF viz
+
+saveRDS(LTER_harmonized,
+        file = file.path("data",
+                         "LTER_harmonized.Rds"))
+
+#FINAL DATA JOINT HARMONIZATION ----
+
+final_harmonized <- NEON_harmonized %>% 
+  bind_rows(LTER_harmonized)
+
+#save as Rds to use in model scripts and PDF viz
+
+saveRDS(final_harmonized,
+        file = file.path("data",
+                         "final_harmonized.Rds"))
 

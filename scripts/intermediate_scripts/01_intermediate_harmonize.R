@@ -50,8 +50,38 @@ harmonized <- harmonized %>%
     TRUE ~ SITE)) %>% 
   relocate(MIDSITE, .after = SITE)
 
-unique(harmonized$MIDSITE)
+#do the same for NTL and each of the different lakes: 
 
+harmonized %>% 
+  filter(SITE == "LTER_NTL") %>% 
+  distinct(SUBSITE)
+
+#list of all lakes
+# 1 AL  = Allequash Lake
+# 2 BM = Big Muskellunge Lake
+# 3 FI = Fish Lake
+# 4 ME  = Lake Mendota
+# 5 MO  = Lake Monona
+# 6 SP  = Sparkling Lake
+# 7 TR  = Trout Lake
+# 8 WI = Lake Wingra
+
+harmonized <- harmonized %>%
+  mutate(MIDSITE = case_when(
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "AL") ~ "LTER_NTL_Allequash Lake",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "BM") ~ "LTER_NTL_Big Muskellunge Lake",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "FI") ~ "LTER_NTL_Fish Lake",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "ME") ~ "LTER_NTL_Lake Mendota",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "MO") ~ "LTER_NTL_Lake Monona",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "SP") ~ "LTER_NTL_Sparkling Lake",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "TR") ~ "LTER_NTL_Trout Lake",
+    SITE == "LTER_NTL" & str_detect(SUBSITE, "WI") ~ "LTER_NTL_Lake Wingra",
+    TRUE ~ MIDSITE)) %>% 
+  relocate(MIDSITE, .after = SITE)
+
+#in total that means we have 
+
+length(unique(harmonized$MIDSITE))
 
 #Bring in taxon list (first from NEON then can append LTER in later)
 
@@ -70,7 +100,7 @@ NEON_data <- harmonized %>%
 
 #check it picked up only NEON sites and first check for obvious mismatches or typos
 
-unique(NEON_data$SITE)
+length(unique(NEON_data$MIDSITE)) #18 unique midsites
 
 setdiff(NEON_data$SCI_NAME,
         taxon$scientificName) #all scientific names match
@@ -78,21 +108,26 @@ setdiff(NEON_data$SCI_NAME,
 setdiff(NEON_data$SP_CODE,
         taxon$acceptedTaxonID) #all codes match 
 
+length(unique(NEON_data$SCI_NAME))
+
 #now check our data for any fish not at a species or subspecies level - in the taxonomic guide this will be helpful to check the taxonRank.
 
 ## NEON STEP 2: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
 
-#pull our data that does not have a species or subspecies taxon rank
+#We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
 
 ranks <- taxon %>% 
   filter(taxonRank != "subspecies") %>% 
   filter(taxonRank != "species")
 
 #this creates a character string of all the scientific names we have in our data that is what we SHOULD drop (anything not a species or subspecies)
+
 drop_table <- NEON_data %>% 
   filter(SCI_NAME %in% ranks$scientificName) %>% 
   distinct(SCI_NAME) %>% 
   pull()
+
+length(drop_table)
 
 #now investigate - how much of our data would we actually be dropping?
 
@@ -102,25 +137,31 @@ NEON_data %>%
 
 #only 0.783% of our overall data for NEON needs to be dropped! How about by site?
 
-total_rows_site <- NEON_data %>% 
-  group_by(SITE) %>% 
+#this calculates the total number of rows for each NEON site 
+
+total_rows_midsite <- NEON_data %>% 
+  group_by(MIDSITE) %>% 
   count() %>% 
   rename(total_rows = `n`)
 
-drop_rows_site <- NEON_data %>% 
+#this is the number of rows in each NEON site that we would drop based on taxon rank
+
+drop_rows_midsite <- NEON_data %>% 
   filter(SCI_NAME %in% drop_table) %>% 
-  group_by(SITE) %>% 
+  group_by(MIDSITE) %>% 
   count() %>% 
   rename(drop = `n`)
 
 #this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
-final_drop_table <- total_rows_site %>% 
-  left_join(drop_rows_site,
-            by = "SITE") %>% 
+
+final_drop_table <- total_rows_midsite %>% 
+  left_join(drop_rows_midsite,
+            by = "MIDSITE") %>% 
   mutate(proportion = (drop/total_rows)*100) %>% 
   arrange(desc(proportion))
 
-final_drop_table #looks like right now only one of concern is NEON_CRAM.
+final_drop_table %>% 
+  select(MIDSITE, proportion)
 
 ## NEON STEP 3: DROP DATA BASED ON TAXON FILTERING ------
 
@@ -133,96 +174,212 @@ NEON_data <- NEON_data %>%
 
 #one way to visualize this is with a matrix 
 
-species_counts <- as.data.frame(tapply(NEON_data$YEAR, list(NEON_data$SCI_NAME, NEON_data$SITE), timeseries))
+species_counts <- as.data.frame(tapply(NEON_data$YEAR, list(NEON_data$SCI_NAME, NEON_data$MIDSITE), timeseries))
 
 NEON_data %>% 
-  group_by(SITE, SCI_NAME) %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
   summarize(n_years = n_distinct(YEAR)) #this gives us how many years each species appears in the data 
 
+#so now drop the data if that n_years is less than 3 (so 1 or 2 years)
+
 rare_drops <- NEON_data %>% 
-  group_by(SITE, SCI_NAME) %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
   summarize(n_years = n_distinct(YEAR)) %>% 
   filter(n_years < 3) %>% 
   select(!n_years) %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME))
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME))
 
+rare_drops
 #How much data would that be dropping?
 
 NEON_data %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(combo %in% rare_drops$combo) %>% 
   summarise(proportion = (nrow(.)/nrow(NEON_data))*100) #in total it's only about 0.332% of our data that we would have to drop, but what about at each SITE?
 
 #Investigate same question but do proportions by site 
 
 total_rows_rare <- NEON_data %>% 
-  group_by(SITE) %>% 
+  group_by(MIDSITE) %>% 
   count() %>% 
   rename(total_rows = `n`)
 
 drop_rows_rare <- NEON_data %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(combo %in% rare_drops$combo) %>% 
-  group_by(SITE) %>% 
+  group_by(MIDSITE) %>% 
   count() %>% 
   rename(drop = `n`)
 
 #this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
 final_drop_table_rare <- total_rows_rare %>% 
   left_join(drop_rows_rare,
-            by = "SITE") %>% 
+            by = "MIDSITE") %>% 
   mutate(proportion = (drop/total_rows)*100) %>% 
   arrange(desc(proportion))
 
-final_drop_table_rare #looks like right now only one of concern is NEON_POSE. By concern what we meean is WHEN we drop the data, that amount of data is what is going to be dropped.
+final_drop_table_rare %>% 
+  select(MIDSITE, proportion) #looks like right now only one of concern is NEON_POSE. By concern what we mean is WHEN we drop the data, that amount of data is what is going to be dropped.
 
 ## NEON STEP 5: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
 
 NEON_data <- NEON_data %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(!combo %in% rare_drops$combo) %>% 
   select(!combo)
 
-##APRIL UPDATE: DROP FROM SP'S GOOGLE DRIVE NOTES 
+#let's check out the total species list we have so far for any last minute obvious drops I may have forgotten: 
 
-#These are sites that Sierra picked out to drop based on environmental variables not being available for > 5 years 
+NEON_species <- unique(NEON_data$SCI_NAME)
 
-## NEON STEP 6: DROP DATA WITH <5 YEARS OF ENVIRONMENTAL DATA & FINAL DROPS
+taxon %>% 
+  filter(scientificName %in% NEON_species)
 
-site_drops <- c("NEON_CARI",
-                "NEON_PRLA",
-                "NEON_PRPO",
-                "NEON_CUPE",
-                "NEON_GUIL",
-                "NEON_LIRO",
-                "NEON_TOOK")
+#from this list there are no obvious outliers or ones that are unidentified! 
 
-NEON_data <- NEON_data %>% 
-  filter(!(SITE %in% site_drops))
+## NEON STEP 6: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA
+
+NEON_do_years_table <- NEON_data %>% 
+  filter(!is.na(annual_avg_DO)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_do_data")
+
+NEON_temp_years_table <- NEON_data %>% 
+  filter(!is.na(mean_daily_temp)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_temp_data")
+
+NEON_env_table <- NEON_do_years_table %>% 
+  left_join(NEON_temp_years_table, by = "MIDSITE") %>% 
+  arrange(desc(years_with_do_data))
+
+#we ideally need both rows to have at least 5 years of data - what issues does that cause us if we drop those? 
+
+NEON_env_table %>% 
+  filter(years_with_do_data < 5 |
+           years_with_temp_data < 5)
+
+#let's make a graph that goes with this to show everyone 
+
+#graph showing which years have BOTH temp and DO 
+
+NEON_data %>% 
+  distinct(MIDSITE, YEAR) %>% 
+  ggplot(aes(x = YEAR,
+             y = MIDSITE)) +
+  geom_point(color = "black") + 
+  geom_point(data = (NEON_data %>% 
+               filter(!is.na(annual_avg_DO)) %>% 
+                 filter(!is.na(mean_daily_temp))),
+             aes(color = MIDSITE),
+             show.legend = F,
+             size = 3) +
+  theme_bw()
+
+
+#how many sites and how much data will we drop if we drop these problem sites? 
+
+problem_sites <- NEON_env_table %>% 
+  filter(years_with_do_data < 5 |
+           years_with_temp_data < 5) %>% 
+  pull(MIDSITE)
+
+NEON_data %>% 
+  filter(MIDSITE %in% problem_sites) %>% 
+  summarise(proportion = (nrow(.)/nrow(NEON_data))*100) #90% of our data would be dropped if we kept ONLY sites that had BOTH env variables > 5 years 
+
+NEON_data %>% 
+  filter(!(MIDSITE %in% problem_sites)) %>% 
+  count() #we would only have 64982 rows if we kept ONLY sites that had BOTH env variables > 5 years 
+
+#instead, let's rock with Jeremy's idea of keeping sites if at LEAST one site has at least 5 years of env data (just switch code to &)
+
+problem_sites <- NEON_env_table %>% 
+  filter(years_with_do_data < 5 &
+           years_with_temp_data < 5) %>% 
+  pull(MIDSITE)
+
+#now instead we are only dropping 6 sites: 
+
+# NEON_CUPE
+# NEON_GUIL
+# NEON_PRPO
+# NEON_LIRO
+# NEON_PRLA
+# NEON_TOOK 
+
+NEON_data %>% 
+  filter(MIDSITE %in% problem_sites) %>% 
+  summarise(proportion = (nrow(.)/nrow(NEON_data))*100) #I mean shoot, we're still dropping 83.8% of our data. 
+
+NEON_data %>% 
+  filter(!(MIDSITE %in% problem_sites)) %>% 
+  count() #we would only have 105,106 rows if we kept ONLY sites that had one or the other env variables for 5 years. 
+
+
+NEON_data <- NEON_data %>%
+  filter(!(SITE %in% problem_sites))
+
+#OLD, but don't delete in case we need to revisit:
 
 #there are also a couple sites where we're only dropping some of the variables:
-
-#drop DO from NEON CRAM AND NEON LECO
-NEON_data <- NEON_data %>%
-  mutate(across(contains("DO"),
-                ~ if_else(SITE %in% c("NEON_CRAM", "NEON_LECO"), NA_real_, .)))
-#
-# #drop temp from NEON KING
-#
-NEON_data <- NEON_data %>%
-  mutate(across(contains("temp"),
-                ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
+# 
+# #drop DO from NEON CRAM AND NEON LECO
+# NEON_data <- NEON_data %>%
+#   mutate(across(contains("DO"),
+#                 ~ if_else(SITE %in% c("NEON_CRAM", "NEON_LECO"), NA_real_, .)))
+# #
+# # #drop temp from NEON KING
+# #
+# NEON_data <- NEON_data %>%
+#   mutate(across(contains("temp"),
+#                 ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
 
 
 #FINAL NEON JOINT HARMONIZATION ----
 
 NEON_harmonized <- NEON_data
 
-#save as Rds to use in model scripts and PDF viz
+#save as Rds to use in model scripts and PDF viz and also as a .csv for Jeremy potentially
 
 saveRDS(NEON_harmonized,
         file = file.path("data",
+                         "clean_data",
                          "NEON_harmonized.Rds"))
+
+write.csv(NEON_harmonized,
+          file = file.path("data",
+                           "clean_data",
+                           "NEON_harmonized.csv"))
+#FINAL NEON OUTPUTS ------
+
+#species list ranked by commonality (how many sites are they at)
+
+NEON_species_list <- NEON_harmonized %>% 
+  group_by(SCI_NAME) %>% 
+  summarise(n_midsites = n_distinct(MIDSITE)) %>% 
+  arrange(-n_midsites)
+
+write.csv(NEON_species_list,
+          file = file.path("data",
+                           "clean_data",
+                           "NEON_specieslist.csv"))
+
+#final list of midsites plus the number of years of fish data, env data, and how many unique species are at each site 
+
+NEON_harmonized_summary <- NEON_harmonized %>% 
+  group_by(MIDSITE) %>% 
+  summarise("Unique Species" = n_distinct(SCI_NAME),
+            "Years of Fish Data" = n_distinct(YEAR)) %>% 
+  left_join(NEON_env_table, by = "MIDSITE") %>% 
+  arrange(desc(`Unique Species`)) %>% 
+  rename("Years of Temp Data" = years_with_temp_data,
+         "Years of DO Data" = years_with_do_data)
+  
+write.csv(NEON_harmonized_summary,
+          file = file.path("data",
+                           "clean_data",
+                           "NEON_harmonized_summary.csv"))
 
 ## LTER STEP 1: READ IN TAXON LISTS ---- 
 

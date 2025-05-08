@@ -41,7 +41,8 @@ harmonized$SITE<-str_remove(harmonized$SITE,'_intermediate.csv')
   
 unique(harmonized$SITE)
 
-#latest update to sites is that we are splitting up the MCR and SBC sites for LTER. 
+##MUTATE STRINGS TO CREATE MIDSITES -----
+
 harmonized <- harmonized %>%
   mutate(MIDSITE = case_when(
     str_detect(SUBSITE, "Backreef") ~ "LTER_MCR_Backreef",
@@ -380,6 +381,7 @@ write.csv(NEON_harmonized_summary,
           file = file.path("data",
                            "clean_data",
                            "NEON_harmonized_summary.csv"))
+
 
 ## LTER STEP 1: READ IN TAXON LISTS ---- 
 

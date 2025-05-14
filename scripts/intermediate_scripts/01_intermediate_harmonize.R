@@ -80,7 +80,29 @@ harmonized <- harmonized %>%
     TRUE ~ MIDSITE)) %>% 
   relocate(MIDSITE, .after = SITE)
 
-#in total that means we have 
+#last thing to do for LTER - SBC! Each SBC site is going to get their own midsite:
+
+harmonized %>% 
+  filter(SITE == "LTER_SBC") %>% 
+  distinct(SUBSITE)
+
+harmonized <- harmonized %>%
+  mutate(MIDSITE = case_when(
+    (SITE == "LTER_SBC" & SUBSITE == "AQUE") ~ "LTER_SBC_AQUE",
+    (SITE == "LTER_SBC" & SUBSITE == "MOHK") ~ "LTER_SBC_MOHK",
+    (SITE == "LTER_SBC" & SUBSITE == "CARP") ~ "LTER_SBC_CARP",
+    (SITE == "LTER_SBC" & SUBSITE == "ABUR") ~ "LTER_SBC_ABUR",
+    (SITE == "LTER_SBC" & SUBSITE == "GOLB") ~ "LTER_SBC_GOLB",
+    (SITE == "LTER_SBC" & SUBSITE == "NAPL") ~ "LTER_SBC_NAPL",
+    (SITE == "LTER_SBC" & SUBSITE == "IVEE") ~ "LTER_SBC_IVEE",
+    (SITE == "LTER_SBC" & SUBSITE == "AHND") ~ "LTER_SBC_AHND",
+    (SITE == "LTER_SBC" & SUBSITE == "BULL") ~ "LTER_SBC_BULL",
+    (SITE == "LTER_SBC" & SUBSITE == "SCDI") ~ "LTER_SBC_SCDI",
+    (SITE == "LTER_SBC" & SUBSITE == "SCTW") ~ "LTER_SBC_SCTW",
+    TRUE ~ MIDSITE)) %>% 
+  relocate(MIDSITE, .after = SITE)
+
+#in total that means we have 41 midsites to look at 
 
 length(unique(harmonized$MIDSITE))
 
@@ -238,7 +260,7 @@ taxon %>%
 
 #from this list there are no obvious outliers or ones that are unidentified! 
 
-## NEON STEP 6: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA
+## NEON STEP 6: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA ----
 
 NEON_do_years_table <- NEON_data %>% 
   filter(!is.na(annual_avg_DO)) %>% 
@@ -449,11 +471,11 @@ setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #85 differences to take care of
   #first take out all NTL data (we'll add it back in once it's cleaned)
   
   LTER_NTL <- LTER_data %>% 
-  filter(MIDSITE == "LTER_NTL")
+  filter(SITE == "LTER_NTL")
 
-#take out NTL here and thne rbind() later 
+#take out NTL here and the rbind() later 
 LTER_data <- LTER_data %>% 
-  filter(MIDSITE != "LTER_NTL")
+  filter(SITE != "LTER_NTL")
 
 #now let's take care of cleaning NTL first 
 
@@ -462,6 +484,53 @@ LTER_NTL <- LTER_NTL %>%
   left_join(LTER_taxon %>% 
               select(COMMON_NAME, SCI_NAME), by = "COMMON_NAME") %>%
   relocate(SCI_NAME, .before = COMMON_NAME)
+
+###LTER STEP 2B: REMOVING THE STOCK FISH -----
+
+#BW caught / made a good point about NEON stocking their lakes - not an issue it turns out for NEON, but IS an issue for the LTER NTL site where they stock their lakes. Let's look at the species affected (we're just going to remove them for now):
+
+stocked <- read.csv(file = file.path("data",
+                                     "raw_data",
+                                     "LTER_NTL",
+                                     "NTL_stockedfish.csv"))
+
+#change stocked quick to match our data because it's honestly the easiest workaround: 
+
+stocked <- stocked %>% 
+  filter(SUBSITE != "CRYSTAL LAKE") %>% 
+  mutate(MIDSITE = case_when(
+    str_detect(SUBSITE, "SPARKLING LAKE") ~ "LTER_NTL_Sparkling Lake",
+    str_detect(SUBSITE, "TROUT LAKE") ~ "LTER_NTL_Trout Lake",
+    str_detect(SUBSITE, "ALLEQUASH LAKE") ~ "LTER_NTL_Allequash Lake",
+    str_detect(SUBSITE, "BIG MUSKELLUNGE LAKE") ~ "LTER_NTL_Big Muskellunge Lake",
+    str_detect(SUBSITE, "FISH LAKE") ~ "LTER_NTL_Fish Lake",
+    str_detect(SUBSITE, "LAKE MENDOTA") ~ "LTER_NTL_Lake Mendota",
+    str_detect(SUBSITE, "LAKE WINGRA") ~ "LTER_NTL_Lake Wingra",
+    str_detect(SUBSITE, "LAKE MONONA") ~ "LTER_NTL_Lake Monona",
+    TRUE ~ SUBSITE)) %>% 
+  relocate(MIDSITE, .after = SUBSITE) %>% 
+  mutate(combo = paste(MIDSITE, COMMON_NAME, sep = "_"))
+
+#now let's see how much of our data is from stocked fish:
+
+LTER_NTL %>% 
+  mutate(combo_main = paste(MIDSITE, COMMON_NAME, sep = "_")) %>% 
+  filter(combo_main %in% stocked$combo) %>% 
+  summarize(proportion = (nrow(.)/nrow(LTER_NTL))*100)
+
+#about 8.96% of our data from the LTER_NTL comes from stocked fish. How about by lake? 
+
+LTER_NTL %>% 
+  mutate(combo_main = paste(MIDSITE, COMMON_NAME, sep = "_")) %>% 
+  group_by(MIDSITE) %>% 
+  summarize(total = n(),
+    matched = sum(combo_main %in% stocked$combo),
+    proportion = (matched / total) * 100) %>% 
+  arrange(desc(proportion))
+  
+#we have some issues that can be dealt with LATER for these LTER lakes: the big 4 lakes Muskellunge, Mendota, Trout, Allequash all have over 10% of their data is stocked fish 
+
+#KEEP FOR NOW UNTIL WE DISCUSS WITH ZACH
 
 #now we can add the LTER_NTL data back into the LTER_data! 
 
@@ -483,6 +552,7 @@ LTER_data %>%
     percent_unidentified = mean(str_detect(SCI_NAME, 
                                            regex("unidentified", 
                                                  ignore_case = TRUE))) * 100)
+
 #good to drop, should be around 1000 rows 
 
 LTER_data <- LTER_data %>%
@@ -568,55 +638,57 @@ setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #drops it down to 44 difference
 
 #one way to visualize this is with a matrix 
 
-species_counts <- as.data.frame(tapply(LTER_data$YEAR, list(LTER_data$SCI_NAME, LTER_data$SITE), timeseries))
+species_counts <- as.data.frame(tapply(LTER_data$YEAR, list(LTER_data$SCI_NAME, LTER_data$MIDSITE), timeseries))
 
 LTER_data %>% 
-  group_by(SITE, SCI_NAME) %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
   summarize(n_years = n_distinct(YEAR)) #this gives us how many years each species appears in the data 
 
 rare_drops_LTER <- LTER_data %>% 
-  group_by(SITE, SCI_NAME) %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
   summarize(n_years = n_distinct(YEAR)) %>% 
   filter(n_years < 3) %>% 
   select(!n_years) %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME))
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME))
 
 #How much data would that be dropping?
 
 LTER_data %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(combo %in% rare_drops_LTER$combo) %>% 
-  summarise(proportion = (nrow(.)/nrow(LTER_data))*100) #in total it's only about 0.279% of our data that we would have to drop, but what about at each SITE?
+  summarise(proportion = (nrow(.)/nrow(LTER_data))*100) #in total it's only about 0.539% of our data that we would have to drop, but what about at each SITE?
 
 #Investigate same question but do proportions by site 
 
 total_rows_rare_LTER <- LTER_data %>% 
-  group_by(SITE) %>% 
+  group_by(MIDSITE) %>% 
   count() %>% 
   rename(total_rows = `n`)
 
 drop_rows_rare_LTER <- LTER_data %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(combo %in% rare_drops_LTER$combo) %>% 
-  group_by(SITE) %>% 
+  group_by(MIDSITE) %>% 
   count() %>% 
   rename(drop = `n`)
 
 #this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
 final_drop_table_rare_LTER <- total_rows_rare_LTER %>% 
   left_join(drop_rows_rare_LTER,
-            by = "SITE") %>% 
+            by = "MIDSITE") %>% 
   mutate(proportion = (drop/total_rows)*100) %>% 
   arrange(desc(proportion))
 
-final_drop_table_rare_LTER #no red flags! 
+final_drop_table_rare_LTER 
+
+#we'd be dropping 12.1% of the data at LTER_SBC_ABUR, just FYI
 
 #drop the rare species 
 
 ## LTER STEP 6: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
 
 LTER_data <- LTER_data %>% 
-  mutate(combo = paste(SITE,"_",SCI_NAME)) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(!combo %in% rare_drops_LTER$combo) %>% 
   select(!combo)
 
@@ -699,15 +771,99 @@ LTER_data <- LTER_data %>%
 
 #should be the last one! 
 
+#let's check the species list 
+
+#BW caught the Gibbonsia that snuck in there 
+
+LTER_data <- LTER_data %>% 
+  filter(SCI_NAME != "Gibbonsia")
+
+## LTER STEP 8: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA ----
+
+LTER_do_years_table <- LTER_data %>% 
+  filter(!is.na(annual_avg_DO)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_do_data")
+
+LTER_temp_years_table <- LTER_data %>% 
+  filter(!is.na(mean_daily_temp)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_temp_data")
+
+LTER_env_table <- LTER_temp_years_table %>% 
+  left_join(LTER_do_years_table, by = "MIDSITE") %>% 
+  arrange(desc(years_with_do_data)) %>% 
+  mutate(years_with_do_data = replace_na(years_with_do_data,0))
+
+LTER_env_table #each site we have more than enough data and more than 5 years! This is EXCEPT for MCR which we have NO DO DATA FOR 
+
+#let's make a graph that goes with this to show everyone 
+
+#graph showing which years have BOTH temp and DO 
+
+LTER_data %>% 
+  distinct(MIDSITE, YEAR) %>% 
+  ggplot(aes(x = YEAR,
+             y = MIDSITE)) +
+  geom_point(color = "black") + 
+  geom_point(data = (LTER_data %>% 
+                       filter(!is.na(annual_avg_DO)) %>% 
+                       filter(!is.na(mean_daily_temp))),
+             aes(color = MIDSITE),
+             show.legend = F,
+             size = 3) +
+  theme_bw()
+
+
+#overall we still don't have "problem" sites because we at least have temp for MCR 
+
+
 #FINAL LTER JOINT HARMONIZATION ----
 
 LTER_harmonized <- LTER_data
 
-#save as Rds to use in model scripts and PDF viz
+#save as Rds to use in model scripts and PDF viz and also as a .csv for Jeremy potentially
 
 saveRDS(LTER_harmonized,
         file = file.path("data",
+                         "clean_data",
                          "LTER_harmonized.Rds"))
+
+write.csv(LTER_harmonized,
+          file = file.path("data",
+                           "clean_data",
+                           "LTER_harmonized.csv"))
+
+#FINAL LTER OUTPUTS ------
+
+#species list ranked by commonality (how many sites are they at)
+
+LTER_species_list <- LTER_harmonized %>% 
+  group_by(SCI_NAME) %>% 
+  summarise(n_midsites = n_distinct(MIDSITE)) %>% 
+  arrange(-n_midsites)
+
+write.csv(LTER_species_list,
+          file = file.path("data",
+                           "clean_data",
+                           "LTER_specieslist.csv"))
+
+#final list of midsites plus the number of years of fish data, env data, and how many unique species are at each site 
+
+LTER_harmonized_summary <- LTER_harmonized %>% 
+  group_by(MIDSITE) %>% 
+  summarise("Unique Species" = n_distinct(SCI_NAME),
+            "Years of Fish Data" = n_distinct(YEAR)) %>% 
+  left_join(LTER_env_table, by = "MIDSITE") %>% 
+  arrange(desc(`Unique Species`)) %>% 
+  rename("Years of Temp Data" = years_with_temp_data,
+         "Years of DO Data" = years_with_do_data)
+
+write.csv(LTER_harmonized_summary,
+          file = file.path("data",
+                           "clean_data",
+                           "LTER_harmonized_summary.csv"))
+
 
 #FINAL DATA JOINT HARMONIZATION ----
 
@@ -718,5 +874,48 @@ final_harmonized <- NEON_harmonized %>%
 
 saveRDS(final_harmonized,
         file = file.path("data",
+                         "clean_data",
                          "final_harmonized.Rds"))
 
+write.csv(final_harmonized,
+          file = file.path("data",
+                           "clean_data",
+                           "final_harmonized.csv"))
+
+#FINAL FULL HARMONIZED OUTPUTS ------
+
+#species list ranked by commonality (how many sites are they at)
+
+final_species_list <- final_harmonized %>% 
+  group_by(SCI_NAME) %>% 
+  summarise(n_midsites = n_distinct(MIDSITE)) %>% 
+  arrange(-n_midsites)
+
+write.csv(final_species_list,
+          file = file.path("data",
+                           "clean_data",
+                           "final_specieslist.csv"))
+
+#final list of midsites plus the number of years of fish data, env data, and how many unique species are at each site 
+
+#first make final harmonized env table 
+
+NEON_env_table <- NEON_env_table %>% 
+  filter(!(MIDSITE %in% problem_sites))
+
+final_env_table <- LTER_env_table %>% 
+  rbind(NEON_env_table) 
+
+final_harmonized_summary <- final_harmonized %>% 
+  group_by(MIDSITE) %>% 
+  summarise("Unique Species" = n_distinct(SCI_NAME),
+            "Years of Fish Data" = n_distinct(YEAR)) %>% 
+  left_join(final_env_table, by = "MIDSITE") %>% 
+  arrange(desc(`Unique Species`)) %>% 
+  rename("Years of Temp Data" = years_with_temp_data,
+         "Years of DO Data" = years_with_do_data)
+
+write.csv(final_harmonized_summary,
+          file = file.path("data",
+                           "clean_data",
+                           "final_harmonized_summary.csv"))

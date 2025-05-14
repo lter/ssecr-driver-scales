@@ -354,24 +354,26 @@ dodata <- dodata %>%
                        "ARQ" ~ "AQUE",
                      SUBSITE ==
                        "MKO" ~ "MOHK",
-                     TRUE ~ SUBSITE)) %>% 
+                     TRUE ~ SUBSITE))
+
+dodata <- dodata %>% 
   filter(SUBSITE == "AQUE" |
            SUBSITE == "MOHK")
 
 
 annual_DO <- dodata %>% 
-  group_by(YEAR) %>%
+  group_by(YEAR, SUBSITE) %>%
   reframe(annual_avg_DO = mean(DO, na.rm = T))  #variable D
 
 #drop_na needed here because some Na's in do effect minimum calculation
 daily_DO <- drop_na(dodata) %>% 
-  group_by(YEAR, DATE) %>% 
+  group_by(YEAR, DATE, SUBSITE) %>% 
   reframe(mean_daily_DO = mean(DO, na.rm = T),
           mean_min_DO = min(DO, na.rm = T)) # get daily mean & min
 
 
 daily_DO <- daily_DO %>% 
-  group_by(YEAR) %>% 
+  group_by(YEAR, SUBSITE) %>% 
   reframe(mean_daily_DO = mean(mean_daily_DO, na.rm = T),
           mean_min_DO = mean(mean_min_DO, na.rm = T))   # variables E & F 
 
@@ -380,6 +382,9 @@ DO_final <- left_join(daily_DO, annual_DO)
 DO_final$YEAR <- DO_final$YEAR + 1 # offset year before joining to fish data
 
 #finalize environmental data 
+
+#see here about joining differently for enviro data? 
+
 
 enviro_final <- temp_final %>%
   merge(DO_final, by=c("YEAR"), all = T) # use merge not join--join drops years if temp or DO missing for year

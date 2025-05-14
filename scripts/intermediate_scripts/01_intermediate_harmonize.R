@@ -785,6 +785,26 @@ LTER_do_years_table <- LTER_data %>%
   distinct(MIDSITE, YEAR) %>%
   count(MIDSITE, name = "years_with_do_data")
 
+#something looks off here because hypothetically the DO data should only exist at 2 sites: AQUE and MOHK. FOR NOW (May 13) just drop the other data and replace with NA, but need to figure out why earlier intermediate function isn't dropping those 
+
+LTER_data <- LTER_data %>%
+  mutate(across(
+    .cols = contains("DO"),
+    .fns = ~ if_else(
+      SITE == "LTER_SBC" & !(MIDSITE %in% c("LTER_SBC_MOHK", "LTER_SBC_AQUE")),
+      NA_real_,
+      .)))
+
+#now make the DO table again
+
+LTER_do_years_table <- LTER_data %>%
+  group_by(MIDSITE, YEAR) %>%
+  summarize(has_data = any(!is.na(annual_avg_DO)), 
+            .groups = "drop") %>%
+  group_by(MIDSITE) %>%
+  summarize(years_with_do_data = sum(has_data), 
+            .groups = "drop")
+
 LTER_temp_years_table <- LTER_data %>% 
   filter(!is.na(mean_daily_temp)) %>% 
   distinct(MIDSITE, YEAR) %>%
@@ -792,8 +812,7 @@ LTER_temp_years_table <- LTER_data %>%
 
 LTER_env_table <- LTER_temp_years_table %>% 
   left_join(LTER_do_years_table, by = "MIDSITE") %>% 
-  arrange(desc(years_with_do_data)) %>% 
-  mutate(years_with_do_data = replace_na(years_with_do_data,0))
+  arrange(desc(years_with_do_data))
 
 LTER_env_table #each site we have more than enough data and more than 5 years! This is EXCEPT for MCR which we have NO DO DATA FOR 
 
@@ -815,7 +834,7 @@ LTER_data %>%
   theme_bw()
 
 
-#overall we still don't have "problem" sites because we at least have temp for MCR 
+#overall we still don't have "problem" sites because we at least have temp for MCR and the other SBC sites that don't have matching DO 
 
 
 #FINAL LTER JOINT HARMONIZATION ----

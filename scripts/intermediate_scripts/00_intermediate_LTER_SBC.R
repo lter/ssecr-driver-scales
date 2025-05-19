@@ -272,44 +272,38 @@ fish$SIZE<-(fish$SIZE)*10
 #                            "raw_LTER_SBC_do_temp.csv"),
 #           row.names = F)
 
-##start here for temp & do if files already download-------
+#May update: using bottom logger data at the suggestion of site PI Dan Reed : 
+##start here for temperature -------
 
 
-envdata <- read.csv(file = file.path("data",
+tempdata <- read.csv(file = file.path("data",
                                   "raw_data",
                                   "LTER_SBC",
-                                  "raw_LTER_SBC_do_temp.csv"))
+                                  "Bottom_temp_all_years_20250128.csv"))
 
 #match column names and date format with fish
 
-envdata <- envdata %>% 
-  rename(SUBSITE = site,
-         DATE = datetime_UTC,
-         TEMP = temperature_C,
-         DO = DO_mgl) %>% 
-  mutate(DATE = ymd_hms(DATE),
-         DATE = as.Date(DATE),
+tempdata <- tempdata %>% 
+  rename(SUBSITE = SITE,
+         DATE = DATE_LOCAL,
+         TEMP = TEMP_C) %>% 
+  mutate(DATE = ymd(DATE),
          YEAR = year(DATE))
 
-setdiff(unique(fish$SUBSITE), unique(envdata$SUBSITE))
+setdiff(unique(fish$SUBSITE), unique(tempdata$SUBSITE))
 sort(unique(fish$SUBSITE))
-sort(unique(envdata$SUBSITE))
-
-#I did not subsite by year because there was not a perfect match between site and surface temperature locations in this dataset
-#could add to group by and merge if needed though
-#for each year obtain:
+sort(unique(tempdata$SUBSITE))
 
 # VARIABLES
 # A) annual average temperature (rational: growing season avg would require identifying growing season at each site)
 # B) annual mean daily max temperature
 # C) annual mean daily min temperature
 
-
-annual_TEMP <- envdata %>% 
+annual_TEMP <- tempdata %>% 
   group_by(YEAR) %>%
   reframe(mean_daily_temp = mean(TEMP, na.rm = T))  #variable A
 
-daily_TEMP <- drop_na(envdata) %>% 
+daily_TEMP <- drop_na(tempdata) %>% 
   group_by(YEAR, DATE) %>% 
   reframe(mean_max_temp = max(TEMP, na.rm = T),
           mean_min_temp = min(TEMP, na.rm = T)) # get daily max & min
@@ -323,25 +317,63 @@ daily_TEMP <- daily_TEMP %>%
 temp_final <- left_join(daily_TEMP, annual_TEMP)
 temp_final$YEAR <- temp_final$YEAR + 1 # offset year before joining to fish data
 
+##now here read in the new DO data ----
+
+dodata <- read.csv(file = file.path("data",
+                                    "raw_data",
+                                    "LTER_SBC",
+                                    "raw_LTER_SBC_do_temp.csv"))
+
 # VARIABLES
 # D) annual average DO (might scratch?)
 # E) annual mean daily DO
 # F) annual mean min DO
 
+dodata <- dodata %>% 
+  rename(SUBSITE = site,
+         DATE = datetime_UTC) %>% 
+  mutate(DATE = ymd_hms(DATE),
+         YEAR = year(DATE),
+         DO = DO_mgl)
 
-annual_DO <- envdata %>% 
-  group_by(YEAR) %>%
+sort(unique(dodata$SUBSITE))
+
+#so technically none of these DO matches - but it could be the different acronyms used ? Here are the sites: Arroyo Burro (ABUR), Arroyo Hondo (AHND), Arroyo Quemado (AQUE), Bullito (BULL), Carpinteria (CARP), Goleta Bay (GOLB), Isla Vista (IVEE), Mohawk (MOHK), Naples (NAPL), Santa Cruz Island (SCDI), Diablo, Santa Cruz Island Twin Harbor West (SCTW)
+
+#here are the sites from DO
+
+#ARQ = Arroyo Quemado Reef , AQI: Arroyo Quemado Inshore, MKI: Mohawk Reef Inshore, MKO: MKO is located at Mohawk reef, ALE: Alegria (ALE) is located offshore, Santa Barbara Harbor (SBH): Santa Barbara Harbor 
+
+#based on map keep ARQ (change to AQUE), MKO (change to MOHK) - just keep these two for now - keep the reef data, not the inshore data?
+
+#note here I only kept the ones that are from the sites we are using 
+
+dodata <- dodata %>% 
+  mutate(SUBSITE = 
+           case_when(SUBSITE == 
+                       "ARQ" ~ "AQUE",
+                     SUBSITE ==
+                       "MKO" ~ "MOHK",
+                     TRUE ~ SUBSITE))
+
+dodata <- dodata %>% 
+  filter(SUBSITE == "AQUE" |
+           SUBSITE == "MOHK")
+
+
+annual_DO <- dodata %>% 
+  group_by(YEAR, SUBSITE) %>%
   reframe(annual_avg_DO = mean(DO, na.rm = T))  #variable D
 
 #drop_na needed here because some Na's in do effect minimum calculation
-daily_DO <- drop_na(envdata) %>% 
-  group_by(YEAR, DATE) %>% 
+daily_DO <- drop_na(dodata) %>% 
+  group_by(YEAR, DATE, SUBSITE) %>% 
   reframe(mean_daily_DO = mean(DO, na.rm = T),
           mean_min_DO = min(DO, na.rm = T)) # get daily mean & min
 
 
 daily_DO <- daily_DO %>% 
-  group_by(YEAR) %>% 
+  group_by(YEAR, SUBSITE) %>% 
   reframe(mean_daily_DO = mean(mean_daily_DO, na.rm = T),
           mean_min_DO = mean(mean_min_DO, na.rm = T))   # variables E & F 
 
@@ -350,6 +382,9 @@ DO_final <- left_join(daily_DO, annual_DO)
 DO_final$YEAR <- DO_final$YEAR + 1 # offset year before joining to fish data
 
 #finalize environmental data 
+
+#see here about joining differently for enviro data? 
+
 
 enviro_final <- temp_final %>%
   merge(DO_final, by=c("YEAR"), all = T) # use merge not join--join drops years if temp or DO missing for year

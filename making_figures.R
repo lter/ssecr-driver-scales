@@ -190,6 +190,7 @@ ggsave(file.path("Figures", "Mean Effects", "Sites_By_Latitude", "Total.pdf"),
 
 bind_rows(list(ind = MI, pop = MP, tot = MT, div = MD), .id = "scale") %>%
   mutate(scale = factor(scale, levels = c("ind", "pop", "tot", "div"))) %>%
+  filter(scale != "tot") %>%
   ggplot(aes(x = scale, y = median, ymin = lower, ymax = upper, 
              color = var, alpha = sig, group = site)) + 
   geom_pointrange(position = position_jitterdodge(jitter.width = .25, 
@@ -197,12 +198,13 @@ bind_rows(list(ind = MI, pop = MP, tot = MT, div = MD), .id = "scale") %>%
   geom_hline(yintercept = 0, linetype = "dashed") + 
   theme_classic(base_size = 15) + 
   theme(axis.text.x = element_text(angle = 300, hjust = 0), 
-        legend.position = "none") + 
+        legend.position = "none", 
+        axis.title.x = element_blank()) + 
   ylab("Effect") + xlab("Response Variable") + 
   scale_color_manual(name = "Variable", labels = c("DO", "Temp."), 
                      values = c("#48A9A6", "#D4B484")) + 
   scale_alpha_manual(values = c(0.15, 1)) + 
-  scale_x_discrete(labels = c("Size", "CPUE", "Summed CPUE", "Diversity"))
+  scale_x_discrete(labels = c("Individual (Size)", "Population (CPUE)", "Community (Diversity)"))
 
 ggsave(file.path("Figures", "Mean Effects", "All.pdf"), 
        width = 6, height = 5, units = "in")
@@ -327,8 +329,9 @@ merge(SI, SP, by = c("s", "site", "var"),
   ggplot(aes(x = median.ind, y = median.pop,
              color = var, fill = var)) + 
   geom_point(size = 2, alpha = .5) + 
-  theme_classic(base_size = 15) + xlab("Effects on Size") + 
-  ylab("Effects on CPUE") + 
+  theme_classic(base_size = 15) + xlab("Effects on Individuals") + 
+  ylab("Effects on Populations") + 
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
   geom_smooth(method = 'lm',
               fullrange = TRUE, linetype = "dashed") + 
   scale_color_manual(name = "Variable", labels = c("DO", "Temp."), 
@@ -363,8 +366,9 @@ merge(MP, MD, by = c("site", "var"),
   ggplot(aes(x = median.pop, y = median.div,
              color = var, fill = var)) + 
   geom_point(size = 2, alpha = .5) + 
-  theme_classic(base_size = 15) + xlab("Effects on CPUE") + 
-  ylab("Effects on Diversity") + 
+  theme_classic(base_size = 15) + xlab("Effects on Populations") + 
+  ylab("Effects on Communities") + 
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   geom_smooth(method = 'lm', 
               fullrange = TRUE, linetype = "dashed") + 
   scale_color_manual(name = "Variable", labels = c("DO", "Temp."), 

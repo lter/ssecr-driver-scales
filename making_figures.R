@@ -211,18 +211,22 @@ ggsave(file.path("Figures", "Mean Effects", "All.pdf"),
 
 bind_rows(list(ind = MI, pop = MP, tot = MT, div = MD), .id = "scale") %>%
   group_by(scale, var) %>%
-  summarise(all = sum(sig == TRUE)/n(), 
-            pos = sum(sig == TRUE & median > 0)/n(), 
-            neg = sum(sig == TRUE & median < 0)/n())
+  summarise(prop.sig = sum(sig == TRUE)/n(), 
+            prop.sig.pos = sum(sig == TRUE & median > 0)/n(), 
+            prop.sig.neg = sum(sig == TRUE & median < 0)/n(), 
+            prop.pos = sum(median > 0)/n(), 
+            prop.neg = sum(median < 0)/n())
 
 # Species-Specific Effects ------------------------------------------------
 
 bind_rows(list(ind = SI, pop = SP), .id = "scale") %>%
   mutate(sig = lower > 0 | upper < 0) %>%
   group_by(scale, var) %>%
-  summarise(all = sum(sig == TRUE)/n(), 
-            pos = sum(sig == TRUE & median > 0)/n(), 
-            neg = sum(sig == TRUE & median < 0)/n())
+  summarise(prop.sig = sum(sig == TRUE)/n(), 
+            prop.sig.pos = sum(sig == TRUE & median > 0)/n(), 
+            prop.sig.neg = sum(sig == TRUE & median < 0)/n(), 
+            prop.pos = sum(median > 0)/n(), 
+            prop.neg = sum(median < 0)/n())
 
 ## Individual -------------------------------------------------------------
 

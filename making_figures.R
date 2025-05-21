@@ -9,7 +9,7 @@ MD <- readRDS(file.path("RDSs", "mean_div_effects_df.RDS"))
 MT <- readRDS(file.path("RDSs", "mean_tot_effects_df.RDS"))
 SI <- readRDS(file.path("RDSs", "species_ind_effects_df.RDS"))
 SP <- readRDS(file.path("RDSs", "species_pop_effects_df.RDS"))
-site.df <- read_xlsx("allsites_coords.xlsx")
+site.df <- read_xlsx(file.path("RDSs","allsites_coords.xlsx"))
 
 # Mean Effects ------------------------------------------------------------
 
@@ -420,4 +420,65 @@ merge(MD, MT, by = c("site", "var"),
 
 ggsave(file.path("Figures", "Corr", "Div_vs_Tot.pdf"), 
        width = 6, height = 5, units = "in")
+
+
+
+##stacked bar chart for proportions -----
+
+#DO graph first 
+
+bind_rows(list(ind = MI, pop = MP, tot = MT, div = MD), .id = "scale") %>%
+  group_by(scale, var) %>%
+  summarise(prop.sig = sum(sig == TRUE)/n(), 
+            prop.sig.pos = sum(sig == TRUE & median > 0)/n(), 
+            prop.sig.neg = sum(sig == TRUE & median < 0)/n(), 
+            prop.non.sig = 1-prop.sig) %>% 
+  select(!prop.sig) %>%
+  pivot_longer(cols = starts_with("prop"),
+               names_to = "category",
+               values_to = "proportion") %>% 
+  filter(var == "DO") %>% 
+  ggplot(aes(fill=category, y=proportion, x=scale)) + 
+  geom_bar(position="stack", stat="identity") +
+  theme_classic(base_size = 15) +
+  labs(x = "Ecological Scale",
+       fill = "",
+       y = "Effect") +
+  scale_x_discrete(labels = c('Diversity','Individual','Population',
+                              'Total')) +
+  scale_fill_manual(labels = c("Not significant", 
+                               "Negative",
+                               "Positive"), 
+                    values = c("gray",
+                               "orange3",
+                               "mediumorchid"))
+
+
+#then do the exact same graph for temp
+
+bind_rows(list(ind = MI, pop = MP, tot = MT, div = MD), .id = "scale") %>%
+  group_by(scale, var) %>%
+  summarise(prop.sig = sum(sig == TRUE)/n(), 
+            prop.sig.pos = sum(sig == TRUE & median > 0)/n(), 
+            prop.sig.neg = sum(sig == TRUE & median < 0)/n(), 
+            prop.non.sig = 1-prop.sig) %>% 
+  select(!prop.sig) %>%
+  pivot_longer(cols = starts_with("prop"),
+               names_to = "category",
+               values_to = "proportion") %>% 
+  filter(var == "temp") %>% 
+  ggplot(aes(fill=category, y=proportion, x=scale)) + 
+  geom_bar(position="stack", stat="identity") +
+  theme_classic(base_size = 15) +
+  labs(x = "Ecological Scale",
+       fill = "",
+       y = "Effect") +
+  scale_x_discrete(labels = c('Diversity','Individual','Population',
+                              'Total')) +
+  scale_fill_manual(labels = c("Not significant", 
+                               "Negative",
+                               "Positive"), 
+                    values = c("gray",
+                               "orange3",
+                               "mediumorchid"))
 

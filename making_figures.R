@@ -436,22 +436,42 @@ bind_rows(list(ind = MI, pop = MP, tot = MT, div = MD), .id = "scale") %>%
   select(!prop.sig) %>%
   pivot_longer(cols = starts_with("prop"),
                names_to = "category",
-               values_to = "proportion") %>% 
-  filter(var == "DO") %>% 
+               values_to = "proportion") %>%
+  filter(scale != "tot") %>% 
+  mutate(var = fct_recode(as.factor(var),
+                          DO = "DO",
+                          Temp = "temp"),
+         scale = as.factor(scale)) %>% 
+  mutate(scale = fct_recode(scale,
+                            A_ind = "ind",
+                            B_pop = "pop",
+                            C_div = "div")) %>% 
+  mutate(scale = fct_relevel(scale, "A_ind", "B_pop", "C_div")) %>% 
   ggplot(aes(fill=category, y=proportion, x=scale)) + 
-  geom_bar(position="stack", stat="identity") +
+  geom_bar(position="stack", stat = "identity",
+           show.legend = T) +
   theme_classic(base_size = 15) +
   labs(x = "Ecological Scale",
        fill = "",
        y = "Effect") +
-  scale_x_discrete(labels = c('Diversity','Individual','Population',
-                              'Total')) +
+  scale_x_discrete(labels = c("A_ind" = "Individual (Size)", 
+                              "B_pop" = "Population (CPUE)", 
+                              "C_div" = "Community (Diversity)")) +
   scale_fill_manual(labels = c("Not significant", 
                                "Negative",
                                "Positive"), 
                     values = c("gray",
                                "orange3",
-                               "mediumorchid"))
+                               "mediumorchid")) +
+  facet_wrap(~var,
+             nrow = 1) +
+  theme(axis.text.x = element_text(angle = 300, hjust = 0, size = 10),
+        legend.position = "top")
+
+  ggsave(plot = last_plot(),
+         file.path("Figures", "stackedbars.jpg"), 
+         width = 10, height = 6, units = "in")
+  
 
 
 #then do the exact same graph for temp

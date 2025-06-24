@@ -45,7 +45,8 @@ write.csv(full_dat, file.path("data","ind_dat.csv"))
 # getting population counts
 pop_dat <- full_dat %>%
   distinct(MIDSITE, DATE, 
-           scaled_mean_daily_DO, scaled_mean_daily_temp, EFFORT) %>%
+           scaled_mean_daily_DO, scaled_mean_daily_temp, 
+           scaled_mean_min_DO, EFFORT) %>%
   crossing(distinct(full_dat, SCI_NAME)) %>%
   left_join(full_dat %>%
               count(MIDSITE, DATE, SCI_NAME, EFFORT, TYPE, name = "count"), 
@@ -59,6 +60,7 @@ pop_dat <- full_dat %>%
   ungroup() %>%
   group_by(MIDSITE, DATE, 
            scaled_mean_daily_DO, scaled_mean_daily_temp, 
+           scaled_mean_min_DO,
            SCI_NAME, TYPE) %>%
   summarise(count = sum(count), 
             CPUE = sum(CPUE)) %>%
@@ -74,7 +76,7 @@ com_dat <- pop_dat %>%
   mutate(YEAR = year(DATE)) %>%
   group_by(MIDSITE) %>%
   mutate(min.count = min(table(.$YEAR))) %>%
-  group_by(MIDSITE, DATE, TYPE, 
+  group_by(MIDSITE, DATE, TYPE, scaled_mean_min_DO,
            scaled_mean_daily_DO, scaled_mean_daily_temp) %>%
   summarise(diversity = diversity(CPUE), 
             total = sum(CPUE), 

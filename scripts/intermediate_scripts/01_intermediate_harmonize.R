@@ -883,11 +883,45 @@ write.csv(LTER_harmonized_summary,
                            "clean_data",
                            "LTER_harmonized_summary.csv"))
 
+# IEP STEP 1: Check sufficient taxonomic resolution -----
+
+IEP_data <- harmonized %>% 
+  filter(MIDSITE == "IEP_YOLO")
+
+IEP_data %>%
+  select(SCI_NAME) %>%
+  unique() %>% c() # 49 taxa, all seem to be at species level
+
+
+# IEP STEP 2: Drop rare species -----
+
+IEP_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>%
+  ggplot(aes(x = n_years)) + 
+  geom_histogram()
+
+IEP_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>%
+  filter(n_years < 3) # just four species with one occurrance
+
+rare_drops <- IEP_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>%
+  filter(n_years < 3) %>% 
+  ungroup() %>%
+  select(SCI_NAME) %>% 
+  unlist()
+
+IEP_data <- IEP_data %>%
+  filter(!SCI_NAME %in% rare_drops)
 
 #FINAL DATA JOINT HARMONIZATION ----
 
 final_harmonized <- NEON_harmonized %>% 
-  bind_rows(LTER_harmonized)
+  bind_rows(LTER_harmonized) %>%
+  bind_rows(IEP_data)
 
 #save as Rds to use in model scripts and PDF viz
 

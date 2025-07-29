@@ -15,7 +15,7 @@ rm(list = ls())
 librarian::shelf(supportR, tidyverse, summarytools, 
                  datacleanr, lterdatasampler,
                  cowplot, gt,
-                 vegan,readxl)
+                 vegan,readxl,GGally)
 
 source(file = file.path("scripts",
                         "functions.R"))
@@ -58,7 +58,54 @@ popdata<-merge(popdata,sitedata,by="Site")
 inddata<-merge(inddata,speciesdata,by="SCI_NAME")
 inddata<-merge(inddata,sitedata,by="Site")
 
+##Correlogram---------------------
+inddatatemp<-subset(inddata,var=="temp")
+inddatado<-subset(inddata,var=="DO")
+inddatafilteredtemp<-subset(inddatatemp,PD>=0.8)
+inddatafiltereddo<-subset(inddatado,PD>=0.8)
 
+popdatatemp<-subset(popdata,var=="temp")
+popdatado<-subset(popdata,var=="DO")
+popdatafilteredtemp<-subset(popdatatemp,PD>=0.8)
+popdatafiltereddo<-subset(popdatado,PD>=0.8)
+
+
+
+#individual all data 
+
+# negative effect of mean temp preference for temp effect on body size, warmer fish less negatively affected
+#temp
+ggpairs(inddatatemp, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+
+#negative effect of max tl for do effect on body size, larger fish more negatively effected
+#do
+ggpairs(inddatado, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+
+#individual filtered
+#filtering generally led to reduced significance and removed many samples
+#temp
+ggpairs(inddatafilteredtemp, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+
+#do
+ggpairs(inddatafiltereddo, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+
+
+#population all data 
+#strong positive temp preference effects on population density, no effects of do (but note the smaller sample size)
+#temp
+ggpairs(popdatatemp, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+
+#do
+ggpairs(popdatado, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+
+#population filtered
+#not enough points to look at habitat
+#temp
+ggpairs(popdatafilteredtemp, columns = c(11:16,5)) 
+
+#not enough points to look at filtered do
+#do
+ggpairs(popdatafiltereddo, columns = c(11:16,5)) 
 
 
 ##Make Graphs for Individual Size DO and Temperature ---------------------

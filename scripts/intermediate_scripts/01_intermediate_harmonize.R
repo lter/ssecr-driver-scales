@@ -378,7 +378,7 @@ NEON_data <- NEON_data %>%
 
 #drop CARI site entirely
 
-NEON_data %>% 
+NEON_data <- NEON_data %>% 
   filter(SITE != "NEON_CARI")
 
 #FINAL NEON JOINT HARMONIZATION ----
@@ -408,7 +408,8 @@ write.csv(NEON_harmonized,
 NEON_species_list <- NEON_harmonized %>% 
   group_by(SCI_NAME) %>% 
   summarise(n_midsites = n_distinct(MIDSITE)) %>% 
-  arrange(-n_midsites)
+  arrange(-n_midsites) %>% 
+  arrange(SCI_NAME)
 
 write.csv(NEON_species_list,
           file = file.path("data",
@@ -424,7 +425,8 @@ NEON_harmonized_summary <- NEON_harmonized %>%
   left_join(NEON_env_table, by = "MIDSITE") %>% 
   arrange(desc(`Unique Species`)) %>% 
   rename("Years of Temp Data" = years_with_temp_data,
-         "Years of DO Data" = years_with_do_data)
+         "Years of DO Data" = years_with_do_data) %>% 
+  arrange(MIDSITE)
   
 write.csv(NEON_harmonized_summary,
           file = file.path("data",
@@ -913,7 +915,8 @@ LTER_harmonized_summary <- LTER_harmonized %>%
   left_join(LTER_env_table, by = "MIDSITE") %>% 
   arrange(desc(`Unique Species`)) %>% 
   rename("Years of Temp Data" = years_with_temp_data,
-         "Years of DO Data" = years_with_do_data)
+         "Years of DO Data" = years_with_do_data) %>% 
+  arrange(MIDSITE)
 
 write.csv(LTER_harmonized_summary,
           file = file.path("data",

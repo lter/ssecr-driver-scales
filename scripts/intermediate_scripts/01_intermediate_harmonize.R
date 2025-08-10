@@ -28,8 +28,8 @@ source(file = file.path("scripts",
 
 #First, download the entire clean intermediate_data folder on Google Drive. For now this is just called "intermediate_data". 
 
-harmonized <- list.files(path = file.path("data", 
-                                           "intermediate_data"),
+harmonized <- list.files(path = file.path("data",
+                            "intermediate_data"),
                           pattern = "\\.csv$", 
                          full.names = TRUE) %>%
   set_names() %>% 
@@ -251,6 +251,19 @@ NEON_data <- NEON_data %>%
   filter(!combo %in% rare_drops$combo) %>% 
   select(!combo)
 
+#Update from Bethany: great catch - looks like some species are being double counted based on the structure of the species name - unsure which sites exactly these species are coming from, so let's find them first so that the "split up" final data is still correct.
+
+doublecounts <- c("Lepomis cyanellus", "Ameiurus melas", "Ameiurus natalis", "catostomus commersonii", "cottus bairdii", "Etheostoma exile", "Etheostoma nigrum", "Lepomis gibbosus", "Lepomis macrochirus", "Luxilus cornutus", "Micropterus dolomieu", "Micropterus salmoides", "Notemigonus crysoleucas", "Notropis volucellus", "Perca flavescens", "Pimephales notatus", "Pseudocheilinus octotaenia", "Pseudocheilinus octotaenia (cf)")
+
+NEON_data %>% 
+  filter(SCI_NAME %in% doublecounts) %>% 
+  distinct(SCI_NAME)
+
+#now let's make every species name structured the same 
+
+NEON_data %>% 
+  distinct(SCI_NAME) #hmm, looks like they all match the correct format in the NEON data - issue might be in the LTER data? 
+
 #let's check out the total species list we have so far for any last minute obvious drops I may have forgotten: 
 
 NEON_species <- unique(NEON_data$SCI_NAME)
@@ -343,25 +356,39 @@ NEON_data %>%
 NEON_data <- NEON_data %>%
   filter(!(SITE %in% problem_sites))
 
-#OLD, but don't delete in case we need to revisit:
+#NEON additional drops:
+
+#here's a list from the data notes of additional drops we'll need to make:
+#CARI: drop site
+#KING: drop temp at site 
+#LECO: drop DO at site
+
 
 #there are also a couple sites where we're only dropping some of the variables:
-# 
-# #drop DO from NEON CRAM AND NEON LECO
-# NEON_data <- NEON_data %>%
-#   mutate(across(contains("DO"),
-#                 ~ if_else(SITE %in% c("NEON_CRAM", "NEON_LECO"), NA_real_, .)))
-# #
-# # #drop temp from NEON KING
-# #
-# NEON_data <- NEON_data %>%
-#   mutate(across(contains("temp"),
-#                 ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
 
+#drop DO NEON LECO
+NEON_data <- NEON_data %>%
+  mutate(across(contains("DO"),
+                ~ if_else(SITE %in% c("NEON_LECO"), NA_real_, .)))
+
+# drop temp from NEON KING
+NEON_data <- NEON_data %>%
+  mutate(across(contains("temp"),
+                ~ if_else(SITE %in% c("NEON_KING"), NA_real_, .)))
+
+#drop CARI site entirely
+
+NEON_data %>% 
+  filter(SITE != "NEON_CARI")
 
 #FINAL NEON JOINT HARMONIZATION ----
 
 NEON_harmonized <- NEON_data
+
+#check all species latin name structures:
+
+NEON_harmonized <- NEON_harmonized %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
 
 #save as Rds to use in model scripts and PDF viz and also as a .csv for Jeremy potentially
 
@@ -561,6 +588,11 @@ LTER_data <- LTER_data %>%
            is.na(SCI_NAME)) #leave NAs in for now 
 
 setdiff(LTER_data$SCI_NAME, LTER_taxon$SCI_NAME) #drops it down to 49 differences 
+
+#Need to change the "Pseudocheilinus octotaenia (cf)"
+
+LTER_data$SCI_NAME[which(LTER_data$COMMON_NAME == "Pseudocheilinus octotaenia (cf)")] <- "Pseudocheilinus octotaenia"
+
 
 ## LTER STEP 4: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
 
@@ -836,6 +868,10 @@ LTER_data %>%
 
 #overall we still don't have "problem" sites because we at least have temp for MCR and the other SBC sites that don't have matching DO 
 
+#getting rid of double counts by making sure all the species have same proper Latin structure 
+
+LTER_data <- LTER_data %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
 
 #FINAL LTER JOINT HARMONIZATION ----
 
@@ -860,7 +896,8 @@ write.csv(LTER_harmonized,
 LTER_species_list <- LTER_harmonized %>% 
   group_by(SCI_NAME) %>% 
   summarise(n_midsites = n_distinct(MIDSITE)) %>% 
-  arrange(-n_midsites)
+  arrange(-n_midsites) %>% 
+  arrange(SCI_NAME)
 
 write.csv(LTER_species_list,
           file = file.path("data",
@@ -917,11 +954,22 @@ rare_drops <- IEP_data %>%
 IEP_data <- IEP_data %>%
   filter(!SCI_NAME %in% rare_drops)
 
+#double check sci.name structure
+
+IEP_data <- IEP_data %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+
 #FINAL DATA JOINT HARMONIZATION ----
 
 final_harmonized <- NEON_harmonized %>% 
   bind_rows(LTER_harmonized) %>%
   bind_rows(IEP_data)
+
+final_harmonized %>% 
+  group_by(SCI_NAME) %>% 
+  summarise(n_midsites = n_distinct(MIDSITE)) %>% 
+  arrange(-n_midsites) %>% 
+  arrange(SCI_NAME)
 
 #save as Rds to use in model scripts and PDF viz
 
@@ -942,7 +990,8 @@ write.csv(final_harmonized,
 final_species_list <- final_harmonized %>% 
   group_by(SCI_NAME) %>% 
   summarise(n_midsites = n_distinct(MIDSITE)) %>% 
-  arrange(-n_midsites)
+  arrange(-n_midsites) %>% 
+  arrange(SCI_NAME)
 
 write.csv(final_species_list,
           file = file.path("data",

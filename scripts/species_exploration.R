@@ -36,11 +36,11 @@ sitedata <- read_xlsx(path = file.path("data",
 
 
 #individual and population data are from model outputs
-inddata <- read_rds(file = file.path("data",
-                                         "species_ind_effects_df.RDS"))
-
-popdata <- read_rds(file = file.path("data",
-                                     "species_pop_effects_df.RDS"))
+inddata <- read_csv(file = file.path("data",
+                                         "species_ind_effects_df.csv"))
+inddata<-subset(inddata,var!="CPUE")
+popdata <- read_csv(file = file.path("data",
+                                     "species_pop_effects_df.csv"))
 
 ## combine data---------------------
 popdata <- popdata %>% 
@@ -53,6 +53,14 @@ popdata$Site<-str_sub(popdata$site,1,3)
 inddata$Site<-str_sub(inddata$site,1,3)
 sitedata$Site<-str_sub(sitedata$Site,1,3)
 
+#check that species are structured the same
+popdata <- popdata %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+inddata <- inddata %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+speciesdata <- speciesdata %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+
 popdata<-merge(popdata,speciesdata,by="SCI_NAME")
 popdata<-merge(popdata,sitedata,by="Site")
 inddata<-merge(inddata,speciesdata,by="SCI_NAME")
@@ -60,7 +68,7 @@ inddata<-merge(inddata,sitedata,by="Site")
 
 ##Correlogram---------------------
 inddatatemp<-subset(inddata,var=="temp")
-inddatado<-subset(inddata,var=="DO")
+inddatado<-subset(inddata,mod=="DO")
 inddatafilteredtemp<-subset(inddatatemp,PD>=0.8)
 inddatafiltereddo<-subset(inddatado,PD>=0.8)
 
@@ -75,37 +83,37 @@ popdatafiltereddo<-subset(popdatado,PD>=0.8)
 
 # negative effect of mean temp preference for temp effect on body size, warmer fish less negatively affected
 #temp
-ggpairs(inddatatemp, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
-
+tempsize<-ggpairs(inddatatemp, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
+print(tempsize)
 #negative effect of max tl for do effect on body size, larger fish more negatively effected
 #do
-ggpairs(inddatado, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
-
+dosize<-ggpairs(inddatado, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
+print(dosize)
 #individual filtered
 #filtering generally led to reduced significance and removed many samples
 #temp
-ggpairs(inddatafilteredtemp, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+ggpairs(inddatafilteredtemp, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
 
 #do
-ggpairs(inddatafiltereddo, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
+ggpairs(inddatafiltereddo, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
 
 
 #population all data 
 #strong positive temp preference effects on population density, no effects of do (but note the smaller sample size)
 #temp
-ggpairs(popdatatemp, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
-
+tempop<-ggpairs(popdatatemp, columns = c(13:18,6),ggplot2::aes(colour=Habitat)) 
+print(tempop)
 #do
-ggpairs(popdatado, columns = c(11:16,5), ggplot2::aes(colour=Habitat)) 
-
+dopop<-ggpairs(popdatado, columns = c(13:18,6), ggplot2::aes(colour=Habitat)) 
+print(dopop)
 #population filtered
 #not enough points to look at habitat
 #temp
-ggpairs(popdatafilteredtemp, columns = c(11:16,5)) 
+ggpairs(popdatafilteredtemp, columns = c(13:18,6)) 
 
 #not enough points to look at filtered do
 #do
-ggpairs(popdatafiltereddo, columns = c(11:16,5)) 
+ggpairs(popdatafiltereddo, columns = c(13:18,6)) 
 
 
 ##Make Graphs for Individual Size DO and Temperature ---------------------
@@ -117,13 +125,13 @@ scatter_funind = function(x, y) {
     geom_smooth(method = "lm", se = TRUE, color = "grey74") +
     theme_cowplot()+
     ggtitle("Individual Unfiltered")+
-    facet_grid(~var+Habitat)
+    facet_grid(~var)
 }
 
 #select explanatory and response variables
-explind = names(inddata)[11:17]
+explind = names(inddata)[13:18]
 explind = set_names(explind)
-respind = names(inddata)[c(5)]
+respind = names(inddata)[c(7)]
 respind = set_names(respind)
 
 all_plots_ind = purrr::map(respind, function(respind) {
@@ -132,6 +140,8 @@ all_plots_ind = purrr::map(respind, function(respind) {
   })
 })
 print(all_plots_ind)
+
+
 
 ##Make Graphs for Population Size DO and Temperature ---------------------
 
@@ -142,13 +152,14 @@ scatter_funpop = function(x, y) {
     geom_smooth(method = "lm", se = TRUE, color = "grey74") +
     theme_cowplot()+
     ggtitle("Population Unfiltered")+
-    facet_grid(~var+Habitat)
+    facet_grid(~var)
+  
 }
 
 #select explanatory and response variables
-explpop = names(popdata)[11:17]
+explpop = names(popdata)[13:18]
 explpop = set_names(explpop)
-resppop = names(popdata)[c(5)]
+resppop = names(popdata)[c(6)]
 resppop = set_names(resppop)
 
 all_plots_pop = purrr::map(resppop, function(resppop) {
@@ -173,13 +184,13 @@ scatter_funindfiltered = function(x, y) {
     geom_smooth(method = "lm", se = TRUE, color = "lightblue") +
     theme_cowplot()+
     ggtitle("Individual Filtered")+
-    facet_grid(~var+Habitat)
+    facet_grid(~var)
 }
 
 #select explanatory and response variables
-explind = names(inddatafiltered)[11:17]
+explind = names(inddatafiltered)[13:18]
 explind = set_names(explind)
-respind = names(inddatafiltered)[5]
+respind = names(inddatafiltered)[7]
 respind = set_names(respind)
 
 all_plots_ind_filtered = purrr::map(respind, function(respind) {
@@ -203,9 +214,9 @@ scatter_funpopfiltered = function(x, y) {
 }
 
 #select explanatory and response variables
-explpop = names(popdata)[11:17]
+explpop = names(popdata)[13:18]
 explpop = set_names(explpop)
-resppop = names(popdata)[5]
+resppop = names(popdata)[7]
 resppop = set_names(resppop)
 
 all_plots_pop_filtered = purrr::map(resppop, function(resppop) {

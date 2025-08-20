@@ -29,11 +29,12 @@ source(file = file.path("scripts",
 
 #species data were collated from Fish Base between June 25th and June 27th 2025
 speciesdata <- read_xlsx(path = file.path("data",
-                                         "Species_attributes.xlsx"))
+                                   "Species_attributes.xlsx"))
+speciesdata$...1<-NULL
 #add site metadata
 sitedata <- read_xlsx(path = file.path("data",
                                           "Site_metadata.xlsx"))
-
+sitedata$...8<-NULL
 
 #individual and population data are from model outputs
 inddata <- read_csv(file = file.path("data",
@@ -61,6 +62,8 @@ inddata <- inddata %>%
 speciesdata <- speciesdata %>% 
   mutate(SCI_NAME = str_to_sentence(SCI_NAME))
 
+speciesdata<-speciesdata%>% distinct(SCI_NAME,.keep_all=TRUE)
+
 popdata<-merge(popdata,speciesdata,by="SCI_NAME")
 popdata<-merge(popdata,sitedata,by="Site")
 inddata<-merge(inddata,speciesdata,by="SCI_NAME")
@@ -68,7 +71,7 @@ inddata<-merge(inddata,sitedata,by="Site")
 
 ##Correlogram---------------------
 inddatatemp<-subset(inddata,var=="temp")
-inddatado<-subset(inddata,mod=="DO")
+inddatado<-subset(inddata,var=="DO")
 inddatafilteredtemp<-subset(inddatatemp,PD>=0.8)
 inddatafiltereddo<-subset(inddatado,PD>=0.8)
 
@@ -83,37 +86,37 @@ popdatafiltereddo<-subset(popdatado,PD>=0.8)
 
 # negative effect of mean temp preference for temp effect on body size, warmer fish less negatively affected
 #temp
-tempsize<-ggpairs(inddatatemp, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
+tempsize<-ggpairs(inddatatemp, columns = c(12:17,7), ggplot2::aes(colour=Habitat)) 
 print(tempsize)
 #negative effect of max tl for do effect on body size, larger fish more negatively effected
 #do
-dosize<-ggpairs(inddatado, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
+dosize<-ggpairs(inddatado, columns = c(12:17,7), ggplot2::aes(colour=Habitat)) 
 print(dosize)
 #individual filtered
 #filtering generally led to reduced significance and removed many samples
 #temp
-ggpairs(inddatafilteredtemp, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
+ggpairs(inddatafilteredtemp, columns = c(12:17,7), ggplot2::aes(colour=Habitat)) 
 
 #do
-ggpairs(inddatafiltereddo, columns = c(13:18,7), ggplot2::aes(colour=Habitat)) 
+ggpairs(inddatafiltereddo, columns = c(12:17,7), ggplot2::aes(colour=Habitat)) 
 
 
 #population all data 
 #strong positive temp preference effects on population density, no effects of do (but note the smaller sample size)
 #temp
-tempop<-ggpairs(popdatatemp, columns = c(13:18,6),ggplot2::aes(colour=Habitat)) 
+tempop<-ggpairs(popdatatemp, columns = c(12:17,6),ggplot2::aes(colour=Habitat)) 
 print(tempop)
 #do
-dopop<-ggpairs(popdatado, columns = c(13:18,6), ggplot2::aes(colour=Habitat)) 
+dopop<-ggpairs(popdatado, columns = c(12:17,6), ggplot2::aes(colour=Habitat)) 
 print(dopop)
 #population filtered
 #not enough points to look at habitat
 #temp
-ggpairs(popdatafilteredtemp, columns = c(13:18,6)) 
+ggpairs(popdatafilteredtemp, columns = c(12:17,6)) 
 
 #not enough points to look at filtered do
 #do
-ggpairs(popdatafiltereddo, columns = c(13:18,6)) 
+ggpairs(popdatafiltereddo, columns = c(12:17,6)) 
 
 
 ##Make Graphs for Individual Size DO and Temperature ---------------------
@@ -129,7 +132,7 @@ scatter_funind = function(x, y) {
 }
 
 #select explanatory and response variables
-explind = names(inddata)[13:18]
+explind = names(inddata)[12:17]
 explind = set_names(explind)
 respind = names(inddata)[c(7)]
 respind = set_names(respind)
@@ -157,7 +160,7 @@ scatter_funpop = function(x, y) {
 }
 
 #select explanatory and response variables
-explpop = names(popdata)[13:18]
+explpop = names(popdata)[12:17]
 explpop = set_names(explpop)
 resppop = names(popdata)[c(6)]
 resppop = set_names(resppop)

@@ -974,6 +974,11 @@ final_harmonized %>%
   arrange(-n_midsites) %>% 
   arrange(SCI_NAME)
 
+##Latest update: RIP IEP LODI SITE! -- too much missing environmental variables. Dropping here (keeping code above JUST in case)
+
+final_harmonized <- final_harmonized %>% 
+  filter(SITE != "IEP_YOLO")
+
 #save as Rds to use in model scripts and PDF viz
 
 saveRDS(final_harmonized,
@@ -1024,3 +1029,5 @@ write.csv(final_harmonized_summary,
           file = file.path("data",
                            "clean_data",
                            "final_harmonized_summary.csv"))
+
+

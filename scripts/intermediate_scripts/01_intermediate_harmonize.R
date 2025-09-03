@@ -43,16 +43,6 @@ unique(harmonized$SITE)
 
 ##MUTATE STRINGS TO CREATE MIDSITES -----
 
-harmonized <- harmonized %>%
-  mutate(MIDSITE = case_when(
-    str_detect(SUBSITE, "Backreef") ~ "LTER_MCR_Backreef",
-    str_detect(SUBSITE, "Fringing Reef") ~ "LTER_MCR_FringingReef",
-    str_detect(SUBSITE, "Forereef") ~ "LTER_MCR_Forereef",
-    TRUE ~ SITE)) %>% 
-  relocate(MIDSITE, .after = SITE)
-
-#do the same for NTL and each of the different lakes: 
-
 harmonized %>% 
   filter(SITE == "LTER_NTL") %>% 
   distinct(SUBSITE)
@@ -67,27 +57,35 @@ harmonized %>%
 # 7 TR  = Trout Lake
 # 8 WI = Lake Wingra
 
-harmonized <- harmonized %>%
-  mutate(MIDSITE = case_when(
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "AL") ~ "LTER_NTL_Allequash Lake",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "BM") ~ "LTER_NTL_Big Muskellunge Lake",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "FI") ~ "LTER_NTL_Fish Lake",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "ME") ~ "LTER_NTL_Lake Mendota",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "MO") ~ "LTER_NTL_Lake Monona",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "SP") ~ "LTER_NTL_Sparkling Lake",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "TR") ~ "LTER_NTL_Trout Lake",
-    SITE == "LTER_NTL" & str_detect(SUBSITE, "WI") ~ "LTER_NTL_Lake Wingra",
-    TRUE ~ MIDSITE)) %>% 
-  relocate(MIDSITE, .after = SITE)
-
 #last thing to do for LTER - SBC! Each SBC site is going to get their own midsite:
 
 harmonized %>% 
   filter(SITE == "LTER_SBC") %>% 
   distinct(SUBSITE)
 
+#new addition (woohoo! NPS site needs midsites):
+
+harmonized %>% 
+  filter(SITE == "NPS_HTLN") %>% 
+  distinct(SUBSITE)
+
+#BUFF and OZAR 
+
+#adding it all as ONE BIG CODE HERE: 
+
 harmonized <- harmonized %>%
   mutate(MIDSITE = case_when(
+    (SITE == "LTER_MCR" & str_detect(SUBSITE, "Backreef") ~ "LTER_MCR_Backreef"),
+    (SITE == "LTER_MCR" & str_detect(SUBSITE, "Fringing Reef") ~ "LTER_MCR_FringingReef"),
+    (SITE == "LTER_MCR" & str_detect(SUBSITE, "Forereef") ~ "LTER_MCR_Forereef"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "AL") ~ "LTER_NTL_Allequash Lake"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "BM") ~ "LTER_NTL_Big Muskellunge Lake"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "FI") ~ "LTER_NTL_Fish Lake"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "ME") ~ "LTER_NTL_Lake Mendota"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "MO") ~ "LTER_NTL_Lake Monona"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "SP") ~ "LTER_NTL_Sparkling Lake"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "TR") ~ "LTER_NTL_Trout Lake"),
+    (SITE == "LTER_NTL" & str_detect(SUBSITE, "WI") ~ "LTER_NTL_Lake Wingra"),
     (SITE == "LTER_SBC" & SUBSITE == "AQUE") ~ "LTER_SBC_AQUE",
     (SITE == "LTER_SBC" & SUBSITE == "MOHK") ~ "LTER_SBC_MOHK",
     (SITE == "LTER_SBC" & SUBSITE == "CARP") ~ "LTER_SBC_CARP",
@@ -99,12 +97,16 @@ harmonized <- harmonized %>%
     (SITE == "LTER_SBC" & SUBSITE == "BULL") ~ "LTER_SBC_BULL",
     (SITE == "LTER_SBC" & SUBSITE == "SCDI") ~ "LTER_SBC_SCDI",
     (SITE == "LTER_SBC" & SUBSITE == "SCTW") ~ "LTER_SBC_SCTW",
-    TRUE ~ MIDSITE)) %>% 
+    (SITE == "NPS_HTLN" & SUBSITE == "BUFF") ~ "NPS_HTLN_BUFF",
+    (SITE == "NPS_HTLN" & SUBSITE == "OZAR") ~ "NPS_HTLN_OZAR",
+    TRUE ~ SITE)) %>% 
   relocate(MIDSITE, .after = SITE)
 
-#in total that means we have 41 midsites to look at 
+
+#in total that means we have 45 midsites to look at 
 
 length(unique(harmonized$MIDSITE))
+unique(harmonized$MIDSITE)
 
 #Bring in taxon list (first from NEON then can append LTER in later)
 
@@ -961,6 +963,435 @@ IEP_data <- IEP_data %>%
 
 IEP_data <- IEP_data %>% 
   mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+
+## NPS STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
+
+#filter only NPS 
+
+NPS_data <- harmonized %>% 
+  filter(grepl('NPS', SITE))
+
+#check it picked up only NPS sites and first check for obvious mismatches or typos
+
+length(unique(NPS_data$MIDSITE)) #2 unique midsites
+
+setdiff(NPS_data$SCI_NAME,
+        taxon$scientificName)
+
+hybrids <- setdiff(NPS_data$SCI_NAME,
+        taxon$scientificName) #only the hybrids are an issue. How many do we have? 
+
+NPS_data %>% 
+  filter(SCI_NAME %in% hybrids) %>% 
+  count() #1190 rows / 234018 rows of total data, 0.5% of data only. Drop. 
+
+NPS_data <- NPS_data %>% 
+  filter(!SCI_NAME %in% hybrids)
+
+setdiff(NPS_data$SP_CODE,
+        taxon$acceptedTaxonID) #all codes match 
+
+length(unique(NPS_data$SCI_NAME)) #77 unique species! 
+
+## NPS STEP 2: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
+
+#We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
+
+ranks
+
+#this creates a character string of all the scientific names we have in our data that is what we SHOULD drop (anything not a species or subspecies)
+
+drop_table <- NPS_data %>% 
+  filter(SCI_NAME %in% ranks$scientificName) %>% 
+  distinct(SCI_NAME) %>% 
+  pull() #nothing at this level - everything good! 
+
+length(drop_table)
+
+## NPS STEP 3: "RARE" SPECIES ------
+
+#at each midsite, figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
+
+#one way to visualize this is with a matrix 
+
+species_counts <- as.data.frame(tapply(NPS_data$YEAR, list(NPS_data$SCI_NAME, NPS_data$MIDSITE), timeseries))
+
+NPS_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>% 
+  View() #this gives us how many years each species appears in the data 
+
+#so now drop the data if that n_years is less than 3 (so 1 or 2 years)
+
+rare_drops <- NPS_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>% 
+  filter(n_years < 3) %>% 
+  select(!n_years) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME))
+
+rare_drops
+
+#How much data would that be dropping?
+
+NPS_data %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops$combo) %>% 
+  summarise(proportion = (nrow(.)/nrow(NPS_data))*100) #in total it's only about 0.0485% of our data that we would have to drop, but what about at each SITE?
+
+#Investigate same question but do proportions by site 
+
+total_rows_rare <- NPS_data %>% 
+  group_by(MIDSITE) %>% 
+  count() %>% 
+  rename(total_rows = `n`)
+
+drop_rows_rare <- NPS_data %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops$combo) %>% 
+  group_by(MIDSITE) %>% 
+  count() %>% 
+  rename(drop = `n`)
+
+#this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
+final_drop_table_rare <- total_rows_rare %>% 
+  left_join(drop_rows_rare,
+            by = "MIDSITE") %>% 
+  mutate(proportion = (drop/total_rows)*100) %>% 
+  arrange(desc(proportion))
+
+final_drop_table_rare %>% 
+  select(MIDSITE, proportion) #proportions for each are super low for each. Good to drop from each.
+
+## NPS STEP 5: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
+
+NPS_data <- NPS_data %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
+  filter(!combo %in% rare_drops$combo) %>% 
+  select(!combo)
+
+#now let's make every species name structured the same 
+
+NPS_data %>% 
+  distinct(SCI_NAME) %>% 
+  arrange(SCI_NAME) 
+
+#let's check out the total species list we have so far for any last minute obvious drops I may have forgotten: 
+
+NPS_species <- unique(NPS_data$SCI_NAME)
+
+taxon %>% 
+  filter(scientificName %in% NPS_species) %>% 
+  View()
+
+#from this list there are no obvious outliers or ones that are unidentified! 
+
+## NPS STEP 6: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA ----
+
+NPS_do_years_table <- NPS_data %>% 
+  filter(!is.na(annual_avg_DO)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_do_data")
+
+NPS_temp_years_table <- NPS_data %>% 
+  filter(!is.na(mean_daily_temp)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_temp_data")
+
+NPS_env_table <- NPS_do_years_table %>% 
+  left_join(NPS_temp_years_table, by = "MIDSITE") %>% 
+  arrange(desc(years_with_do_data))
+
+#we ideally need both rows to have at least 5 years of data - what issues does that cause us if we drop those? 
+
+NPS_env_table %>% 
+  filter(years_with_do_data < 5 |
+           years_with_temp_data < 5) #no issues
+
+#let's make a graph that goes with this to show everyone 
+
+#graph showing which years have BOTH temp and DO 
+
+NPS_data %>% 
+  distinct(MIDSITE, YEAR) %>% 
+  ggplot(aes(x = YEAR,
+             y = MIDSITE)) +
+  geom_point(color = "black") + 
+  geom_point(data = (NPS_data %>% 
+                       filter(!is.na(annual_avg_DO)) %>% 
+                       filter(!is.na(mean_daily_temp))),
+             aes(color = MIDSITE),
+             show.legend = F,
+             size = 3) +
+  theme_bw()
+
+#no issues 
+
+#FINAL NPS JOINT HARMONIZATION ----
+
+NPS_harmonized <- NPS_data
+
+#check all species latin name structures:
+
+NPS_harmonized <- NPS_harmonized %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+
+#save as Rds to use in model scripts and PDF viz and also as a .csv for Jeremy potentially
+
+saveRDS(NPS_harmonized,
+        file = file.path("data",
+                         "clean_data",
+                         "NPS_harmonized.Rds"))
+
+write.csv(NPS_harmonized,
+          file = file.path("data",
+                           "clean_data",
+                           "NPS_harmonized.csv"))
+#FINAL NPS OUTPUTS ------
+
+#species list ranked by commonality (how many sites are they at)
+
+NPS_species_list <- NPS_harmonized %>% 
+  group_by(SCI_NAME) %>% 
+  summarise(n_midsites = n_distinct(MIDSITE)) %>% 
+  arrange(-n_midsites) %>% 
+  arrange(SCI_NAME)
+
+write.csv(NPS_species_list,
+          file = file.path("data",
+                           "clean_data",
+                           "NPS_specieslist.csv"))
+
+#final list of midsites plus the number of years of fish data, env data, and how many unique species are at each site 
+
+NPS_harmonized_summary <- NPS_harmonized %>% 
+  group_by(MIDSITE) %>% 
+  summarise("Unique Species" = n_distinct(SCI_NAME),
+            "Years of Fish Data" = n_distinct(YEAR)) %>% 
+  left_join(NPS_env_table, by = "MIDSITE") %>% 
+  arrange(desc(`Unique Species`)) %>% 
+  rename("Years of Temp Data" = years_with_temp_data,
+         "Years of DO Data" = years_with_do_data) %>% 
+  arrange(MIDSITE)
+
+write.csv(NPS_harmonized_summary,
+          file = file.path("data",
+                           "clean_data",
+                           "NPS_harmonized_summary.csv"))
+
+## UCD SUMA STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
+
+#filter only UCD 
+
+UCD_data <- harmonized %>% 
+  filter(grepl('UCD', SITE))
+
+#check it picked up only UCD sites and first check for obvious mismatches or typos
+
+length(unique(UCD_data$MIDSITE)) #just 1 "midsite"
+
+setdiff(UCD_data$SCI_NAME,
+        taxon$scientificName) 
+
+# [1] "Platichthys stellatus"     "Tridentiger barbatus"     
+# [3] "Tridentiger bifasciatus"   "Leptocottus armatus"      
+# [5] "Clupea pallasi"            "Engraulis mordax"         
+# [7] "Clevelandia ios"           "Paralichthys californicus"
+# [9] "Porichthys notatus"        "Syngnathus leptorhynchus" 
+# [11] "Hypomesus pretiosus"       "Genyonemus lineatus"      
+# [13] "Gillichthys mirabilis"     "Citharichthys sordidus"   
+# [15] "Citharichthys stigmaeus"
+
+setdiff(NPS_data$SP_CODE,
+        taxon$acceptedTaxonID) #all codes match, which means that it's just the sci name that's wrong? fascinating 
+
+length(unique(NPS_data$SCI_NAME)) #65 unique species! 
+
+## NPS STEP 2: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
+
+#We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
+
+ranks
+
+#this creates a character string of all the scientific names we have in our data that is what we SHOULD drop (anything not a species or subspecies)
+
+drop_table <- NPS_data %>% 
+  filter(SCI_NAME %in% ranks$scientificName) %>% 
+  distinct(SCI_NAME) %>% 
+  pull() #nothing at this level - everything good! 
+
+length(drop_table)
+
+## NPS STEP 3: "RARE" SPECIES ------
+
+#at each midsite, figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
+
+#one way to visualize this is with a matrix 
+
+species_counts <- as.data.frame(tapply(NPS_data$YEAR, list(NPS_data$SCI_NAME, NPS_data$MIDSITE), timeseries))
+
+NPS_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>% 
+  View() #this gives us how many years each species appears in the data 
+
+#so now drop the data if that n_years is less than 3 (so 1 or 2 years)
+
+rare_drops <- NPS_data %>% 
+  group_by(MIDSITE, SCI_NAME) %>% 
+  summarize(n_years = n_distinct(YEAR)) %>% 
+  filter(n_years < 3) %>% 
+  select(!n_years) %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME))
+
+rare_drops
+
+#How much data would that be dropping?
+
+NPS_data %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops$combo) %>% 
+  summarise(proportion = (nrow(.)/nrow(NPS_data))*100) #in total it's only about 0.0485% of our data that we would have to drop, but what about at each SITE?
+
+#Investigate same question but do proportions by site 
+
+total_rows_rare <- NPS_data %>% 
+  group_by(MIDSITE) %>% 
+  count() %>% 
+  rename(total_rows = `n`)
+
+drop_rows_rare <- NPS_data %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
+  filter(combo %in% rare_drops$combo) %>% 
+  group_by(MIDSITE) %>% 
+  count() %>% 
+  rename(drop = `n`)
+
+#this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
+final_drop_table_rare <- total_rows_rare %>% 
+  left_join(drop_rows_rare,
+            by = "MIDSITE") %>% 
+  mutate(proportion = (drop/total_rows)*100) %>% 
+  arrange(desc(proportion))
+
+final_drop_table_rare %>% 
+  select(MIDSITE, proportion) #proportions for each are super low for each. Good to drop from each.
+
+## NPS STEP 5: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
+
+NPS_data <- NPS_data %>% 
+  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
+  filter(!combo %in% rare_drops$combo) %>% 
+  select(!combo)
+
+#now let's make every species name structured the same 
+
+NPS_data %>% 
+  distinct(SCI_NAME) %>% 
+  arrange(SCI_NAME) 
+
+#let's check out the total species list we have so far for any last minute obvious drops I may have forgotten: 
+
+NPS_species <- unique(NPS_data$SCI_NAME)
+
+taxon %>% 
+  filter(scientificName %in% NPS_species) %>% 
+  View()
+
+#from this list there are no obvious outliers or ones that are unidentified! 
+
+## NPS STEP 6: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA ----
+
+NPS_do_years_table <- NPS_data %>% 
+  filter(!is.na(annual_avg_DO)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_do_data")
+
+NPS_temp_years_table <- NPS_data %>% 
+  filter(!is.na(mean_daily_temp)) %>% 
+  distinct(MIDSITE, YEAR) %>%
+  count(MIDSITE, name = "years_with_temp_data")
+
+NPS_env_table <- NPS_do_years_table %>% 
+  left_join(NPS_temp_years_table, by = "MIDSITE") %>% 
+  arrange(desc(years_with_do_data))
+
+#we ideally need both rows to have at least 5 years of data - what issues does that cause us if we drop those? 
+
+NPS_env_table %>% 
+  filter(years_with_do_data < 5 |
+           years_with_temp_data < 5) #no issues
+
+#let's make a graph that goes with this to show everyone 
+
+#graph showing which years have BOTH temp and DO 
+
+NPS_data %>% 
+  distinct(MIDSITE, YEAR) %>% 
+  ggplot(aes(x = YEAR,
+             y = MIDSITE)) +
+  geom_point(color = "black") + 
+  geom_point(data = (NPS_data %>% 
+                       filter(!is.na(annual_avg_DO)) %>% 
+                       filter(!is.na(mean_daily_temp))),
+             aes(color = MIDSITE),
+             show.legend = F,
+             size = 3) +
+  theme_bw()
+
+#no issues 
+
+#FINAL NPS JOINT HARMONIZATION ----
+
+NPS_harmonized <- NPS_data
+
+#check all species latin name structures:
+
+NPS_harmonized <- NPS_harmonized %>% 
+  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+
+#save as Rds to use in model scripts and PDF viz and also as a .csv for Jeremy potentially
+
+saveRDS(NPS_harmonized,
+        file = file.path("data",
+                         "clean_data",
+                         "NPS_harmonized.Rds"))
+
+write.csv(NPS_harmonized,
+          file = file.path("data",
+                           "clean_data",
+                           "NPS_harmonized.csv"))
+#FINAL NPS OUTPUTS ------
+
+#species list ranked by commonality (how many sites are they at)
+
+NPS_species_list <- NPS_harmonized %>% 
+  group_by(SCI_NAME) %>% 
+  summarise(n_midsites = n_distinct(MIDSITE)) %>% 
+  arrange(-n_midsites) %>% 
+  arrange(SCI_NAME)
+
+write.csv(NPS_species_list,
+          file = file.path("data",
+                           "clean_data",
+                           "NPS_specieslist.csv"))
+
+#final list of midsites plus the number of years of fish data, env data, and how many unique species are at each site 
+
+NPS_harmonized_summary <- NPS_harmonized %>% 
+  group_by(MIDSITE) %>% 
+  summarise("Unique Species" = n_distinct(SCI_NAME),
+            "Years of Fish Data" = n_distinct(YEAR)) %>% 
+  left_join(NPS_env_table, by = "MIDSITE") %>% 
+  arrange(desc(`Unique Species`)) %>% 
+  rename("Years of Temp Data" = years_with_temp_data,
+         "Years of DO Data" = years_with_do_data) %>% 
+  arrange(MIDSITE)
+
+write.csv(NPS_harmonized_summary,
+          file = file.path("data",
+                           "clean_data",
+                           "NPS_harmonized_summary.csv"))
 
 #FINAL DATA JOINT HARMONIZATION ----
 

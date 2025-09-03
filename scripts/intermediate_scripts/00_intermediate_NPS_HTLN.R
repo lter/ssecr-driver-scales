@@ -312,3 +312,14 @@ plot.presence(intermediate,
 plot.speciesaccum(intermediate,
                   species_col = "COMMON_NAME",
                   subsite = F)
+
+#check if any fish are stocked
+
+fishsummary<-intermediate%>% group_by(SUBSITE)%>%reframe(COMMON_NAME=unique(COMMON_NAME))
+aggregate(COMMON_NAME~SUBSITE,data=fishsummary,FUN=length)
+
+#looks like NPS generally doesn't stock fish
+#But trout are found near confluence of White River and Buffalo
+#trout are nonnative and stocked in White River
+#but only 27 datapoints from whole dataset
+#looks like trout stocked in MO as well

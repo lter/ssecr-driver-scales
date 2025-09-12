@@ -116,6 +116,8 @@ taxon <- read.csv(file = file.path("data",
 taxon <-  taxon %>% 
   select(taxonID, acceptedTaxonID, scientificName, vernacularName, taxonRank)
 
+#NEON ----
+
 ## NEON STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
 
 #filter only NEON 
@@ -403,7 +405,7 @@ write.csv(NEON_harmonized,
           file = file.path("data",
                            "clean_data",
                            "NEON_harmonized.csv"))
-#FINAL NEON OUTPUTS ------
+#FINAL NEON CSV OUTPUTS ------
 
 #species list ranked by commonality (how many sites are they at)
 
@@ -435,6 +437,7 @@ write.csv(NEON_harmonized_summary,
                            "clean_data",
                            "NEON_harmonized_summary.csv"))
 
+#LTER ----
 
 ## LTER STEP 1: READ IN TAXON LISTS ---- 
 
@@ -893,7 +896,7 @@ write.csv(LTER_harmonized,
                            "clean_data",
                            "LTER_harmonized.csv"))
 
-#FINAL LTER OUTPUTS ------
+#FINAL LTER CSV SUMMARY OUTPUTS ------
 
 #species list ranked by commonality (how many sites are they at)
 
@@ -925,44 +928,7 @@ write.csv(LTER_harmonized_summary,
                            "clean_data",
                            "LTER_harmonized_summary.csv"))
 
-# IEP STEP 1: Check sufficient taxonomic resolution -----
-
-IEP_data <- harmonized %>% 
-  filter(MIDSITE == "IEP_YOLO")
-
-IEP_data %>%
-  select(SCI_NAME) %>%
-  unique() %>% c() # 49 taxa, all seem to be at species level
-
-
-# IEP STEP 2: Drop rare species -----
-
-IEP_data %>% 
-  group_by(MIDSITE, SCI_NAME) %>% 
-  summarize(n_years = n_distinct(YEAR)) %>%
-  ggplot(aes(x = n_years)) + 
-  geom_histogram()
-
-IEP_data %>% 
-  group_by(MIDSITE, SCI_NAME) %>% 
-  summarize(n_years = n_distinct(YEAR)) %>%
-  filter(n_years < 3) # just four species with one occurrance
-
-rare_drops <- IEP_data %>% 
-  group_by(MIDSITE, SCI_NAME) %>% 
-  summarize(n_years = n_distinct(YEAR)) %>%
-  filter(n_years < 3) %>% 
-  ungroup() %>%
-  select(SCI_NAME) %>% 
-  unlist()
-
-IEP_data <- IEP_data %>%
-  filter(!SCI_NAME %in% rare_drops)
-
-#double check sci.name structure
-
-IEP_data <- IEP_data %>% 
-  mutate(SCI_NAME = str_to_sentence(SCI_NAME))
+#NPS ----
 
 ## NPS STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
 
@@ -997,16 +963,21 @@ length(unique(NPS_data$SCI_NAME)) #77 unique species!
 
 #We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
 
-ranks
+NPS_data %>% 
+  distinct(SCI_NAME) #good to go
 
 #this creates a character string of all the scientific names we have in our data that is what we SHOULD drop (anything not a species or subspecies)
 
-drop_table <- NPS_data %>% 
-  filter(SCI_NAME %in% ranks$scientificName) %>% 
-  distinct(SCI_NAME) %>% 
-  pull() #nothing at this level - everything good! 
+## NPS STEP 2.5 DROP STOCKED SPECIES -----
 
-length(drop_table)
+#remove rainbow trout! 
+
+NPS_data %>% 
+  filter(SCI_NAME == "Oncorhynchus mykiss") %>% 
+  count() #only 27 rows, can drop
+
+NPS_data <- NPS_data %>% 
+  filter(SCI_NAME != "Oncorhynchus mykiss")
 
 ## NPS STEP 3: "RARE" SPECIES ------
 
@@ -1147,7 +1118,7 @@ write.csv(NPS_harmonized,
           file = file.path("data",
                            "clean_data",
                            "NPS_harmonized.csv"))
-#FINAL NPS OUTPUTS ------
+#FINAL NPS CSV OUTPUTS ------
 
 #species list ranked by commonality (how many sites are they at)
 
@@ -1178,6 +1149,8 @@ write.csv(NPS_harmonized_summary,
           file = file.path("data",
                            "clean_data",
                            "NPS_harmonized_summary.csv"))
+
+#UCD SUMA ---- 
 
 ## UCD SUMA STEP 1: CHECK AGAINST OFFICIAL TAXONOMIC LIST FOR TYPOS/MISMATCHES ---- 
 
@@ -1202,42 +1175,160 @@ setdiff(UCD_data$SCI_NAME,
 # [13] "Gillichthys mirabilis"     "Citharichthys sordidus"   
 # [15] "Citharichthys stigmaeus"
 
-setdiff(NPS_data$SP_CODE,
-        taxon$acceptedTaxonID) #all codes match, which means that it's just the sci name that's wrong? fascinating 
+# [1] "Platichthys stellatus" is a starry flounder - not yet in taxa. Checked online to verify.
 
-length(unique(NPS_data$SCI_NAME)) #65 unique species! 
+#"Tridentiger barbatus" is a Shokihaze goby
 
-## NPS STEP 2: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
+#Tridentiger bifasciatus is a Shimofuri goby.. okay so far all of these are checking out - they just aren't in our taxa list! 
+
+UCD_data %>% 
+  distinct(SCI_NAME) %>% 
+  View()
+
+#read in annoyingly long species table: 
+UCD_taxon <- data.frame(
+SCI_NAME = c(
+  "Morone saxatilis",
+  "Spirinchus thaleichthys",
+  "Acanthogobius flavimanus",
+  "Ameiurus catus",
+  "Pogonichthys macrolepidotus",
+  "Hysterocarpus traskii",
+  "Dorosoma petenense",
+  "Cyprinus carpio",
+  "Platichthys stellatus",
+  "Tridentiger barbatus",
+  "Tridentiger bifasciatus",
+  "Cottus asper",
+  "Ameiurus melas",
+  "Gasterosteus aculeatus",
+  "Catostomus occidentalis",
+  "Menidia beryllina",
+  "Leptocottus armatus",
+  "Alosa sapidissima",
+  "Pomoxis nigromaculatus",
+  "Lepomis macrochirus",
+  "Clupea pallasi",
+  "Pimephales promelas",
+  "Ptychocheilus grandis",
+  "Carassius auratus",
+  "Hypomesus transpacificus",
+  "Ictalurus punctatus",
+  "Lavinia exilicauda",
+  "Percina macrolepida",
+  "Engraulis mordax",
+  "Ameiurus nebulosus",
+  "Acipenser transmontanus",
+  "Lucania parva",
+  "Oncorhynchus tshawytscha",
+  "Hypomesus nipponensis",
+  "Mylopharodon conocephalus",
+  "Lepomis microlophus",
+  "Pomoxis annularis",
+  "Clevelandia ios",
+  "Paralichthys californicus",
+  "Notemigonus crysoleucas",
+  "Oncorhynchus mykiss",
+  "Porichthys notatus",
+  "Orthodon microlepidotus",
+  "Cymatogaster aggregata",
+  "Syngnathus leptorhynchus",
+  "Gambusia affinis",
+  "Hypomesus pretiosus",
+  "Genyonemus lineatus",
+  "Lepomis cyanellus",
+  "Lepomis gulosus",
+  "Acipenser medirostris",
+  "Gillichthys mirabilis",
+  "Citharichthys sordidus",
+  "Citharichthys stigmaeus"
+),
+COMMON_NAME = c(
+  "Striped bass",
+  "Longfin smelt",
+  "Yellowfin goby",
+  "White catfish",
+  "Sacramento splittail",
+  "Tule perch",
+  "Threadfin shad",
+  "Common carp",
+  "Starry flounder",
+  "Shokihaze goby",
+  "Shimofuri goby",
+  "Prickly sculpin",
+  "Black bullhead",
+  "Threespine stickleback",
+  "Sacramento sucker",
+  "Inland silverside",
+  "Pacific staghorn sculpin",
+  "American shad",
+  "Black crappie",
+  "Bluegill",
+  "Pacific herring",
+  "Fathead minnow",
+  "Sacramento pikeminnow",
+  "Goldfish",
+  "Delta smelt",
+  "Channel catfish",
+  "Hitch",
+  "Bigscale logperch",
+  "Northern anchovy",
+  "Brown bullhead",
+  "White sturgeon",
+  "Rainwater killifish",
+  "Chinook salmon",
+  "Wakasagi",
+  "Hardhead",
+  "Redear sunfish",
+  "White crappie",
+  "Arrow goby",
+  "California halibut",
+  "Golden shiner",
+  "Rainbow trout / Steelhead",
+  "Plainfin midshipman",
+  "Sacramento blackfish",
+  "Shiner perch",
+  "Bay pipefish",
+  "Western mosquitofish",
+  "Surf smelt",
+  "White croaker",
+  "Green sunfish",
+  "Warmouth",
+  "Green sturgeon",
+  "Longjaw mudsucker",
+  "Pacific sanddab",
+  "Speckled sanddab"
+),
+stringsAsFactors = FALSE
+)
+
+UCD_data <- UCD_data %>%
+  select(!COMMON_NAME) %>% 
+  left_join(UCD_taxon, by = "SCI_NAME") %>% 
+  relocate(COMMON_NAME, .after = SCI_NAME)
+
+length(unique(UCD_data$SCI_NAME)) #54 unique species! 
+
+## UCD STEP 2: FILTER FOR ONLY SUBSPECIES & SPECIES ---- 
 
 #We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
 
-ranks
+UCD_data %>% 
+  distinct(SCI_NAME) #good to go! 
 
-#this creates a character string of all the scientific names we have in our data that is what we SHOULD drop (anything not a species or subspecies)
+## UCD STEP 3: "RARE" SPECIES & DROPPING THEM ------
 
-drop_table <- NPS_data %>% 
-  filter(SCI_NAME %in% ranks$scientificName) %>% 
-  distinct(SCI_NAME) %>% 
-  pull() #nothing at this level - everything good! 
-
-length(drop_table)
-
-## NPS STEP 3: "RARE" SPECIES ------
-
-#at each midsite, figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
+#figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
 
 #one way to visualize this is with a matrix 
 
-species_counts <- as.data.frame(tapply(NPS_data$YEAR, list(NPS_data$SCI_NAME, NPS_data$MIDSITE), timeseries))
+species_counts <- as.data.frame(tapply(UCD_data$YEAR, list(UCD_data$SCI_NAME, UCD_data$MIDSITE), timeseries))
 
-NPS_data %>% 
-  group_by(MIDSITE, SCI_NAME) %>% 
-  summarize(n_years = n_distinct(YEAR)) %>% 
-  View() #this gives us how many years each species appears in the data 
+species_counts
 
 #so now drop the data if that n_years is less than 3 (so 1 or 2 years)
 
-rare_drops <- NPS_data %>% 
+rare_drops <- UCD_data %>% 
   group_by(MIDSITE, SCI_NAME) %>% 
   summarize(n_years = n_distinct(YEAR)) %>% 
   filter(n_years < 3) %>% 
@@ -1248,90 +1339,51 @@ rare_drops
 
 #How much data would that be dropping?
 
-NPS_data %>% 
+UCD_data %>% 
   mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(combo %in% rare_drops$combo) %>% 
-  summarise(proportion = (nrow(.)/nrow(NPS_data))*100) #in total it's only about 0.0485% of our data that we would have to drop, but what about at each SITE?
+  summarise(proportion = (nrow(.)/nrow(UCD_data))*100) #in total it's only about 0.02% of our data that we would have to drop - good to go! 
 
-#Investigate same question but do proportions by site 
-
-total_rows_rare <- NPS_data %>% 
-  group_by(MIDSITE) %>% 
-  count() %>% 
-  rename(total_rows = `n`)
-
-drop_rows_rare <- NPS_data %>% 
-  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
-  filter(combo %in% rare_drops$combo) %>% 
-  group_by(MIDSITE) %>% 
-  count() %>% 
-  rename(drop = `n`)
-
-#this is the final table that will tell us what the proportion of data is for EACH site that we would be dropping. Flag ones > 10%. 
-final_drop_table_rare <- total_rows_rare %>% 
-  left_join(drop_rows_rare,
-            by = "MIDSITE") %>% 
-  mutate(proportion = (drop/total_rows)*100) %>% 
-  arrange(desc(proportion))
-
-final_drop_table_rare %>% 
-  select(MIDSITE, proportion) #proportions for each are super low for each. Good to drop from each.
-
-## NPS STEP 5: DROP DATA BASED ON SPECIES FREQUENCY/RARE SPECIES ----
-
-NPS_data <- NPS_data %>% 
-  mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
-  filter(!combo %in% rare_drops$combo) %>% 
-  select(!combo)
+UCD_data <- UCD_data %>% 
+  filter(!SCI_NAME %in% rare_drops$SCI_NAME)
 
 #now let's make every species name structured the same 
 
-NPS_data %>% 
+UCD_data %>% 
   distinct(SCI_NAME) %>% 
   arrange(SCI_NAME) 
 
-#let's check out the total species list we have so far for any last minute obvious drops I may have forgotten: 
 
-NPS_species <- unique(NPS_data$SCI_NAME)
+## UCD STEP 6: INVESTIGATING YEARS OF AVAILABLE ENV DATA ----
 
-taxon %>% 
-  filter(scientificName %in% NPS_species) %>% 
-  View()
-
-#from this list there are no obvious outliers or ones that are unidentified! 
-
-## NPS STEP 6: DROPPING MIDSITES BASED ON YEARS OF AVAILABLE ENV DATA ----
-
-NPS_do_years_table <- NPS_data %>% 
+UCD_do_years_table <- UCD_data %>% 
   filter(!is.na(annual_avg_DO)) %>% 
   distinct(MIDSITE, YEAR) %>%
   count(MIDSITE, name = "years_with_do_data")
 
-NPS_temp_years_table <- NPS_data %>% 
+UCD_temp_years_table <- UCD_data %>% 
   filter(!is.na(mean_daily_temp)) %>% 
   distinct(MIDSITE, YEAR) %>%
   count(MIDSITE, name = "years_with_temp_data")
 
-NPS_env_table <- NPS_do_years_table %>% 
-  left_join(NPS_temp_years_table, by = "MIDSITE") %>% 
+UCD_env_table <- UCD_do_years_table %>% 
+  left_join(UCD_temp_years_table, by = "MIDSITE") %>% 
   arrange(desc(years_with_do_data))
 
 #we ideally need both rows to have at least 5 years of data - what issues does that cause us if we drop those? 
 
-NPS_env_table %>% 
+UCD_env_table %>% 
   filter(years_with_do_data < 5 |
            years_with_temp_data < 5) #no issues
 
-#let's make a graph that goes with this to show everyone 
-
 #graph showing which years have BOTH temp and DO 
 
-NPS_data %>% 
-  distinct(MIDSITE, YEAR) %>% 
+UCD_data %>% 
+  distinct(YEAR, SITE) %>% 
   ggplot(aes(x = YEAR,
-             y = MIDSITE)) +
+             y = SITE)) +
   geom_point(color = "black") + 
-  geom_point(data = (NPS_data %>% 
+  geom_point(data = (UCD_data %>% 
                        filter(!is.na(annual_avg_DO)) %>% 
                        filter(!is.na(mean_daily_temp))),
              aes(color = MIDSITE),
@@ -1341,63 +1393,65 @@ NPS_data %>%
 
 #no issues 
 
-#FINAL NPS JOINT HARMONIZATION ----
+#FINAL UCD JOINT HARMONIZATION ----
 
-NPS_harmonized <- NPS_data
+UCD_harmonized <- UCD_data
 
 #check all species latin name structures:
 
-NPS_harmonized <- NPS_harmonized %>% 
+UCD_harmonized <- UCD_harmonized %>% 
   mutate(SCI_NAME = str_to_sentence(SCI_NAME))
 
 #save as Rds to use in model scripts and PDF viz and also as a .csv for Jeremy potentially
 
-saveRDS(NPS_harmonized,
+saveRDS(UCD_harmonized,
         file = file.path("data",
                          "clean_data",
-                         "NPS_harmonized.Rds"))
+                         "UCD_harmonized.Rds"))
 
-write.csv(NPS_harmonized,
+write.csv(UCD_harmonized,
           file = file.path("data",
                            "clean_data",
-                           "NPS_harmonized.csv"))
-#FINAL NPS OUTPUTS ------
+                           "UCD_harmonized.csv"))
+#FINAL UCD OUTPUTS ------
 
 #species list ranked by commonality (how many sites are they at)
 
-NPS_species_list <- NPS_harmonized %>% 
+UCD_species_list <- UCD_harmonized %>% 
   group_by(SCI_NAME) %>% 
   summarise(n_midsites = n_distinct(MIDSITE)) %>% 
   arrange(-n_midsites) %>% 
   arrange(SCI_NAME)
 
-write.csv(NPS_species_list,
+write.csv(UCD_species_list,
           file = file.path("data",
                            "clean_data",
-                           "NPS_specieslist.csv"))
+                           "UCD_specieslist.csv"))
 
 #final list of midsites plus the number of years of fish data, env data, and how many unique species are at each site 
 
-NPS_harmonized_summary <- NPS_harmonized %>% 
+UCD_harmonized_summary <- UCD_harmonized %>% 
   group_by(MIDSITE) %>% 
   summarise("Unique Species" = n_distinct(SCI_NAME),
             "Years of Fish Data" = n_distinct(YEAR)) %>% 
-  left_join(NPS_env_table, by = "MIDSITE") %>% 
+  left_join(UCD_env_table, by = "MIDSITE") %>% 
   arrange(desc(`Unique Species`)) %>% 
   rename("Years of Temp Data" = years_with_temp_data,
          "Years of DO Data" = years_with_do_data) %>% 
   arrange(MIDSITE)
 
-write.csv(NPS_harmonized_summary,
+write.csv(UCD_harmonized_summary,
           file = file.path("data",
                            "clean_data",
-                           "NPS_harmonized_summary.csv"))
+                           "UCD_harmonized_summary.csv"))
 
 #FINAL DATA JOINT HARMONIZATION ----
 
 final_harmonized <- NEON_harmonized %>% 
   bind_rows(LTER_harmonized) %>%
-  bind_rows(IEP_data)
+  bind_rows(UCD_harmonized) %>% 
+  bind_rows(NPS_harmonized)
+  # bind_rows(IEP_data) RIP LODI! 
 
 final_harmonized %>% 
   group_by(SCI_NAME) %>% 
@@ -1444,10 +1498,16 @@ write.csv(final_species_list,
 NEON_env_table <- NEON_env_table %>% 
   filter(!(MIDSITE %in% problem_sites))
 
-final_env_table <- LTER_env_table %>% 
-  rbind(NEON_env_table) 
+site_lookup <- final_harmonized %>% 
+  distinct(SITE, MIDSITE)
 
-final_harmonized_summary <- final_harmonized %>% 
+final_env_table <- LTER_env_table %>% 
+  rbind(NEON_env_table) %>% 
+  rbind(NPS_env_table) %>% 
+  rbind(UCD_env_table) %>% 
+  left_join(site_lookup)
+
+final_harmonized_summary_allmidsites <- final_harmonized %>% 
   group_by(MIDSITE) %>% 
   summarise("Unique Species" = n_distinct(SCI_NAME),
             "Years of Fish Data" = n_distinct(YEAR)) %>% 
@@ -1456,9 +1516,61 @@ final_harmonized_summary <- final_harmonized %>%
   rename("Years of Temp Data" = years_with_temp_data,
          "Years of DO Data" = years_with_do_data)
 
+write.csv(final_harmonized_summary_allmidsites,
+          file = file.path("data",
+                           "clean_data",
+                           "final_harmonized_midsites_summary.csv"))
+
+final_harmonized_summary <- final_harmonized %>% 
+  summarise("Unique Species" = n_distinct(SCI_NAME),
+            "Years of Fish Data" = n_distinct(YEAR)) %>% 
+  arrange(desc(`Unique Species`))
+
 write.csv(final_harmonized_summary,
           file = file.path("data",
                            "clean_data",
                            "final_harmonized_summary.csv"))
+
+
+#old IEP code ----
+
+# # IEP STEP 1: Check sufficient taxonomic resolution -----
+# 
+# IEP_data <- harmonized %>% 
+#   filter(MIDSITE == "IEP_YOLO")
+# 
+# IEP_data %>%
+#   select(SCI_NAME) %>%
+#   unique() %>% c() # 49 taxa, all seem to be at species level
+# 
+# 
+# # IEP STEP 2: Drop rare species -----
+# 
+# IEP_data %>% 
+#   group_by(MIDSITE, SCI_NAME) %>% 
+#   summarize(n_years = n_distinct(YEAR)) %>%
+#   ggplot(aes(x = n_years)) + 
+#   geom_histogram()
+# 
+# IEP_data %>% 
+#   group_by(MIDSITE, SCI_NAME) %>% 
+#   summarize(n_years = n_distinct(YEAR)) %>%
+#   filter(n_years < 3) # just four species with one occurrance
+# 
+# rare_drops <- IEP_data %>% 
+#   group_by(MIDSITE, SCI_NAME) %>% 
+#   summarize(n_years = n_distinct(YEAR)) %>%
+#   filter(n_years < 3) %>% 
+#   ungroup() %>%
+#   select(SCI_NAME) %>% 
+#   unlist()
+# 
+# IEP_data <- IEP_data %>%
+#   filter(!SCI_NAME %in% rare_drops)
+# 
+# #double check sci.name structure
+# 
+# IEP_data <- IEP_data %>% 
+#   mutate(SCI_NAME = str_to_sentence(SCI_NAME))
 
 

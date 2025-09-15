@@ -41,7 +41,13 @@ harmonized$SITE<-str_remove(harmonized$SITE,'_intermediate.csv')
   
 unique(harmonized$SITE)
 
+#how many sites do we have? 
+
+length(unique(harmonized$SITE))
+
 ##MUTATE STRINGS TO CREATE MIDSITES -----
+
+#WE'RE CREATING ALL THE MIDSITE SUBSTRINGS FIRST 
 
 harmonized %>% 
   filter(SITE == "LTER_NTL") %>% 
@@ -107,6 +113,8 @@ harmonized <- harmonized %>%
 
 length(unique(harmonized$MIDSITE))
 unique(harmonized$MIDSITE)
+
+##BRING IN TAXON LIST --- 
 
 #Bring in taxon list (first from NEON then can append LTER in later)
 
@@ -202,6 +210,8 @@ NEON_data <- NEON_data %>%
 #one way to visualize this is with a matrix 
 
 species_counts <- as.data.frame(tapply(NEON_data$YEAR, list(NEON_data$SCI_NAME, NEON_data$MIDSITE), timeseries))
+
+species_counts
 
 NEON_data %>% 
   group_by(MIDSITE, SCI_NAME) %>% 
@@ -324,6 +334,8 @@ problem_sites <- NEON_env_table %>%
            years_with_temp_data < 5) %>% 
   pull(MIDSITE)
 
+problem_sites
+
 NEON_data %>% 
   filter(MIDSITE %in% problem_sites) %>% 
   summarise(proportion = (nrow(.)/nrow(NEON_data))*100) #90% of our data would be dropped if we kept ONLY sites that had BOTH env variables > 5 years 
@@ -334,12 +346,14 @@ NEON_data %>%
 
 #instead, let's rock with Jeremy's idea of keeping sites if at LEAST one site has at least 5 years of env data (just switch code to &)
 
-problem_sites <- NEON_env_table %>% 
+problem_sites2 <- NEON_env_table %>% 
   filter(years_with_do_data < 5 &
            years_with_temp_data < 5) %>% 
   pull(MIDSITE)
 
 #now instead we are only dropping 6 sites: 
+
+problem_sites2
 
 # NEON_CUPE
 # NEON_GUIL
@@ -446,7 +460,8 @@ write.csv(NEON_harmonized_summary,
 LTER_data <- harmonized %>% 
   filter(grepl('LTER', SITE))
 
-unique(LTER_data$MIDSITE)
+unique(LTER_data$SITE)
+length(unique(LTER_data$MIDSITE))
 
 #may have to do this site by site (got this from MCR metadata)
 
@@ -564,9 +579,14 @@ LTER_NTL %>%
   
 #we have some issues that can be dealt with LATER for these LTER lakes: the big 4 lakes Muskellunge, Mendota, Trout, Allequash all have over 10% of their data is stocked fish 
 
-#KEEP FOR NOW UNTIL WE DISCUSS WITH ZACH
-
 #now we can add the LTER_NTL data back into the LTER_data! 
+
+#LATEST UPDATE: NEED TO REMOVE THESE STOCKED FISH STILL! 
+
+LTER_NTL <- LTER_NTL %>% 
+  mutate(combo_main = paste(MIDSITE, COMMON_NAME, sep = "_")) %>% 
+  filter(!combo_main %in% stocked$combo) %>% 
+  select(!combo_main)
 
 LTER_data <- LTER_data %>% 
   bind_rows(LTER_NTL)
@@ -853,7 +873,7 @@ LTER_env_table <- LTER_temp_years_table %>%
   left_join(LTER_do_years_table, by = "MIDSITE") %>% 
   arrange(desc(years_with_do_data))
 
-LTER_env_table #each site we have more than enough data and more than 5 years! This is EXCEPT for MCR which we have NO DO DATA FOR 
+View(LTER_env_table) #each site we have more than enough data and more than 5 years! This is EXCEPT for MCR & SBC which we have NO DO DATA FOR 
 
 #let's make a graph that goes with this to show everyone 
 
@@ -955,7 +975,7 @@ NPS_data <- NPS_data %>%
   filter(!SCI_NAME %in% hybrids)
 
 setdiff(NPS_data$SP_CODE,
-        taxon$acceptedTaxonID) #all codes match 
+        taxon$acceptedTaxonID) #all codes match - note that I'm using just the NEON taxon list since it should be the same
 
 length(unique(NPS_data$SCI_NAME)) #77 unique species! 
 
@@ -964,7 +984,7 @@ length(unique(NPS_data$SCI_NAME)) #77 unique species!
 #We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
 
 NPS_data %>% 
-  distinct(SCI_NAME) #good to go
+  distinct(SCI_NAME) #good to go based on referencing online lists of species
 
 #this creates a character string of all the scientific names we have in our data that is what we SHOULD drop (anything not a species or subspecies)
 
@@ -989,8 +1009,8 @@ species_counts <- as.data.frame(tapply(NPS_data$YEAR, list(NPS_data$SCI_NAME, NP
 
 NPS_data %>% 
   group_by(MIDSITE, SCI_NAME) %>% 
-  summarize(n_years = n_distinct(YEAR)) %>% 
-  View() #this gives us how many years each species appears in the data 
+  summarize(n_years = n_distinct(YEAR)) 
+  #View() #this gives us how many years each species appears in the data 
 
 #so now drop the data if that n_years is less than 3 (so 1 or 2 years)
 
@@ -1052,8 +1072,7 @@ NPS_data %>%
 NPS_species <- unique(NPS_data$SCI_NAME)
 
 taxon %>% 
-  filter(scientificName %in% NPS_species) %>% 
-  View()
+  filter(scientificName %in% NPS_species)
 
 #from this list there are no obvious outliers or ones that are unidentified! 
 
@@ -1182,8 +1201,7 @@ setdiff(UCD_data$SCI_NAME,
 #Tridentiger bifasciatus is a Shimofuri goby.. okay so far all of these are checking out - they just aren't in our taxa list! 
 
 UCD_data %>% 
-  distinct(SCI_NAME) %>% 
-  View()
+  distinct(SCI_NAME) 
 
 #read in annoyingly long species table: 
 UCD_taxon <- data.frame(
@@ -1300,7 +1318,7 @@ COMMON_NAME = c(
   "Speckled sanddab"
 ),
 stringsAsFactors = FALSE
-)
+) #I found this list online by putting in the scientific names into ChatGPT, and then referenced by Google Search.
 
 UCD_data <- UCD_data %>%
   select(!COMMON_NAME) %>% 
@@ -1314,7 +1332,7 @@ length(unique(UCD_data$SCI_NAME)) #54 unique species!
 #We want to filter out in our data anything that is not at the species or subspecies level. What I'm going to do is build a table from the taxon list that is NOT subspecies or species, then see what matches in our data (to then take out).
 
 UCD_data %>% 
-  distinct(SCI_NAME) #good to go! 
+  distinct(SCI_NAME) #good to go! Again, based this off looking through the scientific names of each fish. 
 
 ## UCD STEP 3: "RARE" SPECIES & DROPPING THEM ------
 

@@ -206,7 +206,7 @@ data$StandardLength[which(data$CatchComments == "Fork length")] <- NA
 
 # all fish in a row (i.e., # in Count column) have the same length, species, etc
 
-data <- bulk[rep(row.names(data), data$Count), 1:9] # each fish now = 1 row
+data <- data[rep(row.names(data), data$Count), 1:9] # each fish now = 1 row
 
 data <- data %>% select(!c(Count)) # drop count column
 
@@ -321,6 +321,45 @@ if (class(effort$EndMeter)=="character") effort$EndMeter <-as.numeric(effort$End
 
 data <- merge(x = data, y = effort[ , c("SampleRowID", "TowDuration")], by = "SampleRowID", all.x=TRUE) # join sampling info to fish data
 
+## ADD MIDSITES  ---------------
+
+# Suisun Marsh has 4 ecologically/hydrographically distinct quadrants (NE, SE, NW, SW) 
+# see map on pg 9 of report for subsite in midsite groupings:
+# https://escholarship.org/content/qt170910gb/qt170910gb.pdf
+
+data$MIDSITE <- NA
+
+data$MIDSITE[which(data$StationCode == "DV1")] <- "NE"
+data$MIDSITE[which(data$StationCode == "DV2")] <- "NE"
+data$MIDSITE[which(data$StationCode == "DV3")] <- "NE"
+data$MIDSITE[which(data$StationCode == "MZ6")] <- "NE"
+data$MIDSITE[which(data$StationCode == "NS1")] <- "NE"
+data$MIDSITE[which(data$StationCode == "NS2")] <- "NE"
+data$MIDSITE[which(data$StationCode == "NS3")] <- "NE"
+
+data$MIDSITE[which(data$StationCode == "BY1")] <- "NW"
+data$MIDSITE[which(data$StationCode == "BY3")] <- "NW"
+data$MIDSITE[which(data$StationCode == "CO1")] <- "NW"
+data$MIDSITE[which(data$StationCode == "CO2")] <- "NW"
+data$MIDSITE[which(data$StationCode == "PT1")] <- "NW"
+data$MIDSITE[which(data$StationCode == "PT2")] <- "NW"
+data$MIDSITE[which(data$StationCode == "SB1")] <- "NW"
+data$MIDSITE[which(data$StationCode == "SB2")] <- "NW"
+data$MIDSITE[which(data$StationCode == "SU1")] <- "NW"
+data$MIDSITE[which(data$StationCode == "SU2")] <- "NW"
+
+data$MIDSITE[which(data$StationCode == "MZ1")] <- "SE"
+data$MIDSITE[which(data$StationCode == "MZ2")] <- "SE"
+
+data$MIDSITE[which(data$StationCode == "GY1")] <- "SW"
+data$MIDSITE[which(data$StationCode == "GY2")] <- "SW"
+data$MIDSITE[which(data$StationCode == "GY3")] <- "SW"
+data$MIDSITE[which(data$StationCode == "SU3")] <- "SW"
+data$MIDSITE[which(data$StationCode == "SU4")] <- "SW"
+
+# use only main sampling sites that fall within one of those locations (~7% of observations dropped)
+data <- data %>% filter(!is.na(MIDSITE)) # drop stations if they don't correspond to midsite
+
 ## FINALIZE FISH ---------------
 
 data$Taxa <- paste(data$Genus, data$Species)
@@ -333,10 +372,11 @@ fish <- data %>%
                 SP_CODE = OrganismCode,
                 SCI_NAME = Taxa,
                 SIZE = StandardLength,
+                MIDSITE = MIDSITE,
                 SUBSITE = StationCode,
                 EFFORT = TowDuration) %>% 
   mutate(YEAR = year(DATE)) %>% 
-  select(DATE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR, EFFORT)
+  select(DATE, MIDSITE, SUBSITE, SP_CODE, SIZE, SCI_NAME, YEAR, EFFORT)
 
 
 # PART #2: TEMP ------
@@ -346,25 +386,58 @@ sampling$SampleDate <- as.Date(sampling$SampleDate, "%m/%d/%Y") # convert to dat
 
 sampling$YEAR <- substr(sampling$SampleDate, 1, 4) # get year
 
+## ADD MIDSITES
+sampling$MIDSITE <- NA 
+
+sampling$MIDSITE[which(sampling$StationCode == "DV1")] <- "NE"
+sampling$MIDSITE[which(sampling$StationCode == "DV2")] <- "NE"
+sampling$MIDSITE[which(sampling$StationCode == "DV3")] <- "NE"
+sampling$MIDSITE[which(sampling$StationCode == "MZ6")] <- "NE"
+sampling$MIDSITE[which(sampling$StationCode == "NS1")] <- "NE"
+sampling$MIDSITE[which(sampling$StationCode == "NS2")] <- "NE"
+sampling$MIDSITE[which(sampling$StationCode == "NS3")] <- "NE"
+
+sampling$MIDSITE[which(sampling$StationCode == "BY1")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "BY3")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "CO1")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "CO2")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "PT1")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "PT2")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "SB1")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "SB2")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "SU1")] <- "NW"
+sampling$MIDSITE[which(sampling$StationCode == "SU2")] <- "NW"
+
+sampling$MIDSITE[which(sampling$StationCode == "MZ1")] <- "SE"
+sampling$MIDSITE[which(sampling$StationCode == "MZ2")] <- "SE"
+
+sampling$MIDSITE[which(sampling$StationCode == "GY1")] <- "SW"
+sampling$MIDSITE[which(sampling$StationCode == "GY2")] <- "SW"
+sampling$MIDSITE[which(sampling$StationCode == "GY3")] <- "SW"
+sampling$MIDSITE[which(sampling$StationCode == "SU3")] <- "SW"
+sampling$MIDSITE[which(sampling$StationCode == "SU4")] <- "SW"
+
+sampling <- sampling %>% filter(!is.na(MIDSITE)) # drop stations if they don't correspond to midsite
+
 # VARIABLES
 # A) annual average temperature (rational: growing season avg would require identifying growing season at each site)
 # B) annual mean daily max temperature
 # C) annual mean daily min temperature
 
 temp_final <- sampling %>% 
-  group_by(YEAR, SampleDate) %>% 
+  group_by(YEAR, MIDSITE, SampleDate) %>% 
   reframe(mean_daily_temp = mean(WaterTemperature, na.rm = T),
           mean_max_temp = max(WaterTemperature, na.rm = T),
           mean_min_temp = min(WaterTemperature, na.rm = T))  %>% 
   filter(!mean_daily_temp == "NaN") %>%
   ungroup() %>%
-  group_by(YEAR) %>%
+  group_by(YEAR, MIDSITE) %>%
   reframe(mean_daily_temp = mean(mean_daily_temp, na.rm = T),
           mean_max_temp = mean(mean_max_temp, na.rm = T),
           mean_min_temp = mean(mean_min_temp,na.rm = T)) # get variables A, B, C
 
-ggplot(sampling, aes(x=SampleDate, y = WaterTemperature)) +
-  geom_point()
+ggplot(sampling, aes(x=SampleDate, y = WaterTemperature, color = MIDSITE)) +
+  geom_point(alpha = .5)
 # drop first and last years because only have data for part of year so average is wonky
 
 temp_final <- temp_final %>% 
@@ -384,24 +457,24 @@ temp_final$YEAR <- temp_final$YEAR + 1 # offset year before joining to fish data
 # F) annual mean min DO
 
 daily_DO <- sampling %>% 
-  group_by(YEAR, SampleDate) %>% 
+  group_by(YEAR, MIDSITE, SampleDate) %>% 
   reframe(mean_daily_DO = mean(DO, na.rm = T),
           mean_min_DO = min(DO, na.rm = T)) # get daily mean & min
 
 daily_DO <- daily_DO %>% 
   filter(!mean_daily_DO == "NaN") %>%
   filter(!mean_min_DO == "Inf") %>%
-  group_by(YEAR) %>% 
+  group_by(YEAR, MIDSITE) %>% 
   reframe(mean_daily_DO = mean(mean_daily_DO, na.rm = T),
           mean_min_DO = mean(mean_min_DO, na.rm = T))  # variables E & F 
 
 annual_DO <- sampling %>% 
-  group_by(YEAR) %>%
+  group_by(YEAR, MIDSITE) %>%
   reframe(annual_avg_DO = mean(DO, na.rm = T))
 
-DO_final <- merge(daily_DO, annual_DO, by = "YEAR", all = T)
+DO_final <- merge(daily_DO, annual_DO, by = c("YEAR", "MIDSITE"), all = T)
 
-ggplot(sampling, aes(x=SampleDate, y = DO)) +
+ggplot(sampling, aes(x=SampleDate, y = DO, color = MIDSITE)) +
   geom_point() # began collecting DO data in 2000
 
 DO_final <- DO_final %>% 
@@ -413,11 +486,11 @@ DO_final$YEAR <- DO_final$YEAR + 1 # offset year before joining to fish data
 #finalize environmental data 
 
 enviro_final <- temp_final %>%
-  merge(DO_final, by=c("YEAR"), all = T) # use merge not join--join drops years if temp or DO missing for year
+  merge(DO_final, by=c("YEAR", "MIDSITE"), all = T) # use merge not join--join drops years if temp or DO missing for year
 
 #PART #4: HARMONIZE TEMP & DO with FISH
 
-intermediate <- left_join(fish, enviro_final, by = c("YEAR"))
+intermediate <- left_join(fish, enviro_final, by = c("YEAR", "MIDSITE"))
 
 # PART 5: FINALIZE INTERMEDIATE DATA --------------------
 

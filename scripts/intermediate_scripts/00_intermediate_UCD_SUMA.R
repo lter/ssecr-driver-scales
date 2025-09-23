@@ -496,11 +496,12 @@ intermediate <- left_join(fish, enviro_final, by = c("YEAR", "MIDSITE"))
 
 #Here, you'll want to rename any columns you already fit to have our required column naming conventions
 
-intermediate.names()
+intermediate.names() # note that MIDSITE is not one of the options so need to manually save vs using the intermediate.prep function
 
 colnames(intermediate)
 
-intermediate.prep(intermediate)
+#intermediate.prep(intermediate)
+write.csv(intermediate, "UCD_SUMA_intermediate.csv", row.names=FALSE)
 
 # (OPTIONAL) DATA VIZ --------------------
 #Play around with subsites by changing to True! The default is false. 

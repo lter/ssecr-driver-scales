@@ -28,7 +28,7 @@ source(file = file.path("scripts",
 
 #First, download the entire clean intermediate_data folder on Google Drive. For now this is just called "intermediate_data". 
 
-harmonized <- list.files(path = file.path("data",
+intermediate_data <- list.files(path = file.path("data",
                             "intermediate_data"),
                           pattern = "\\.csv$", 
                          full.names = TRUE) %>%
@@ -37,13 +37,17 @@ harmonized <- list.files(path = file.path("data",
   mutate(file_name = basename(file_name))%>%
   rename(SITE = file_name)
 
-harmonized$SITE<-str_remove(harmonized$SITE,'_intermediate.csv')
+intermediate_data$SITE<-str_remove(intermediate_data$SITE,'_intermediate.csv')
   
-unique(harmonized$SITE)
+unique(intermediate_data$SITE)
 
 #how many sites do we have? 
 
 length(unique(harmonized$SITE))
+
+#start here for cleaning so that you don't have to re-read in everything :
+
+harmonized <- intermediate_data
 
 ##MUTATE STRINGS TO CREATE MIDSITES -----
 
@@ -111,17 +115,12 @@ harmonized <- harmonized %>%
     (SITE == "LTER_SBC" & SUBSITE == "SCTW") ~ "LTER_SBC_SCTW",
     (SITE == "NPS_HTLN" & SUBSITE == "BUFF") ~ "NPS_HTLN_BUFF",
     (SITE == "NPS_HTLN" & SUBSITE == "OZAR") ~ "NPS_HTLN_OZAR",
+    (SITE == "UCD_SUMA" ~ 
+       paste0("UCD_SUMA_",MIDSITE)),
     TRUE ~ SITE)) %>% 
   relocate(MIDSITE, .after = SITE)
 
-#for SUMA let's just name midsite what the subsite is listed as:
-
-harmonized <- harmonized %>% 
-  mutate(MIDSITE = case_when(SITE == "UCD_SUMA" ~ 
-                               paste0("UCD_SUMA_",SUBSITE),
-                             TRUE ~ MIDSITE))
-
-#in total that means we have 68 midsites to look at 
+#in total that means we have 46 midsites to look at 
 
 length(unique(harmonized$SITE))
 length(unique(harmonized$MIDSITE))
@@ -1193,7 +1192,7 @@ UCD_data <- harmonized %>%
 
 #check it picked up only UCD sites and first check for obvious mismatches or typos
 
-length(unique(UCD_data$MIDSITE)) #now 24 midsites
+length(unique(UCD_data$MIDSITE)) #now 4 midsites
 
 setdiff(UCD_data$SCI_NAME,
         taxon$scientificName) 

@@ -77,6 +77,12 @@ harmonized %>%
 
 #BUFF and OZAR 
 
+#new addition for the SUMA - these should all have midsites! 
+
+harmonized %>% 
+  filter(SITE == "UCD_SUMA") %>% 
+  distinct(SUBSITE)
+
 #adding it all as ONE BIG CODE HERE: 
 
 harmonized <- harmonized %>%
@@ -108,9 +114,16 @@ harmonized <- harmonized %>%
     TRUE ~ SITE)) %>% 
   relocate(MIDSITE, .after = SITE)
 
+#for SUMA let's just name midsite what the subsite is listed as:
 
-#in total that means we have 45 midsites to look at 
+harmonized <- harmonized %>% 
+  mutate(MIDSITE = case_when(SITE == "UCD_SUMA" ~ 
+                               paste0("UCD_SUMA_",SUBSITE),
+                             TRUE ~ MIDSITE))
 
+#in total that means we have 68 midsites to look at 
+
+length(unique(harmonized$SITE))
 length(unique(harmonized$MIDSITE))
 unique(harmonized$MIDSITE)
 
@@ -1180,7 +1193,7 @@ UCD_data <- harmonized %>%
 
 #check it picked up only UCD sites and first check for obvious mismatches or typos
 
-length(unique(UCD_data$MIDSITE)) #just 1 "midsite"
+length(unique(UCD_data$MIDSITE)) #now 24 midsites
 
 setdiff(UCD_data$SCI_NAME,
         taxon$scientificName) 
@@ -1334,6 +1347,15 @@ length(unique(UCD_data$SCI_NAME)) #54 unique species!
 UCD_data %>% 
   distinct(SCI_NAME) #good to go! Again, based this off looking through the scientific names of each fish. 
 
+#new note to add! We need to filter out Gambusia affinis because it's stocked 
+
+UCD_data %>% 
+  filter(SCI_NAME == "Gambusia affinis") %>% 
+  count() #only 21 rows good to drop 
+
+UCD_data <- UCD_data %>% 
+  filter(SCI_NAME != "Gambusia affinis")
+
 ## UCD STEP 3: "RARE" SPECIES & DROPPING THEM ------
 
 #figure out if there are any species that have occurred only 1 or 2 times. We will want to drop these. 
@@ -1360,7 +1382,7 @@ rare_drops
 UCD_data %>% 
   mutate(combo = paste(MIDSITE,"_",SCI_NAME)) %>% 
   filter(combo %in% rare_drops$combo) %>% 
-  summarise(proportion = (nrow(.)/nrow(UCD_data))*100) #in total it's only about 0.02% of our data that we would have to drop - good to go! 
+  summarise(proportion = (nrow(.)/nrow(UCD_data))*100) #in total it's only about 0.179% of our data that we would have to drop - good to go! 
 
 UCD_data <- UCD_data %>% 
   filter(!SCI_NAME %in% rare_drops$SCI_NAME)

@@ -27,7 +27,7 @@ source(file = file.path("scripts",
 #internal note, make sure to download data from Google drive first
 #load info on sites that were included in dataset
 sitedata <- read_csv(file = file.path("data",
-                                         "final_harmonized_summary.csv"))
+                                         "final_harmonized_midsites_summary.csv"))
 #load final harmonized data to extract do and temp average for site
 envdata<- read_csv(file = file.path("data",
                                     "final_harmonized.csv"))
@@ -35,10 +35,11 @@ envdata<- read_csv(file = file.path("data",
 #load coordinates for each site
 coord<-read_xlsx(path = file.path("data",
                           "allsites_coords.xlsx"))
-
+coord$...8<-NULL
 #combine site and coordinate data
 
 sitedata<-merge(sitedata,coord, by="MIDSITE")
+sitedata$...8<-NULL
 sitedata$...1<-NULL
 
 #get averages for temp and do for each site
@@ -56,77 +57,79 @@ sitedata<-merge(sitedata,DO,by="MIDSITE")
 
 ## load Parameter Estimates ---------------------
 div <- read_csv(file = file.path("data",
-                                      "mean_div_effects_df.csv"))
+                                      "marg_si_com.csv"))
 
 cpue <- read_csv(file = file.path("data",
-                                 "mean_pop_effects_df.csv"))
+                                 "pop.csv"))
 
 sl <- read_csv(file = file.path("data",
-                                  "mean_ind_effects_df.csv"))
+                                  "ind.csv"))
 
 #remove prefixes from site names to be able to merge
 
-patterns_to_remove <- c("LTER_","NEON_","IEP_")
-combined_pattern <- paste(patterns_to_remove, collapse = "|")
-sitedata$MIDSITE<-str_remove_all(sitedata$MIDSITE,combined_pattern)
+#patterns_to_remove <- c("LTER_","NEON_","IEP_")
+#combined_pattern <- paste(patterns_to_remove, collapse = "|")
+#sitedata$MIDSITE<-str_remove_all(sitedata$MIDSITE,combined_pattern)
 
 #get names matching
 sitedata <- sitedata %>% 
-  rename(site = MIDSITE)
+  rename(si = MIDSITE)
+
 
 #merge to get final datasets for graphing
 
-cpue<-merge(sitedata,cpue,by="site")
-cpue<-subset(cpue,site!="MCR_Backreef"& site!="MCR_FringingReef" &site!="MCR_Forereef")
+cpue<-merge(sitedata,cpue,by="si")
+cpue<-subset(cpue,si!="MCR_Backreef"& si!="MCR_FringingReef" &si!="MCR_Forereef")
 
-div<-merge(sitedata,div,by="site")
-div<-subset(div,site!="MCR_Backreef"& site!="MCR_FringingReef" &site!="MCR_Forereef")
+div<-merge(sitedata,div,by="si")
+div<-subset(div,si!="MCR_Backreef"& si!="MCR_FringingReef" &si!="MCR_Forereef")
 
-sl<-merge(sitedata,sl,by="site")
-#remove cpue parameter estimates for graphing
-sl<-subset(sl,var!="CPUE")
+sl<-left_join(sl,sitedata,by="si")
+
 #try without morea since its lat is so different
-sl<-subset(sl,site!="MCR_Backreef"& site!="MCR_FringingReef" &site!="MCR_Forereef")
+sl<-subset(sl,si!="MCR_Backreef"& si!="MCR_FringingReef" &si!="MCR_Forereef")
 
 ###Make Correlelograms---------------------
-inddatatemp<-subset(sl,var=="temp")
-inddatado<-subset(sl,var=="DO")
+inddatatemp<-subset(sl,.variable=="beta_temp")
+inddatado<-subset(sl,.variable=="beta_DO")
 
-popdatatemp<-subset(cpue,var=="temp")
-popdatado<-subset(cpue,var=="DO")
+popdatatemp<-subset(cpue,.variable=="beta_temp")
+popdatado<-subset(cpue,.variable=="beta_DO")
 
-divdatatemp<-subset(div,var=="temp")
-divdatado<-subset(div,var=="DO")
+divdatatemp<-subset(div,.variable=="beta_temp")
+divdatado<-subset(div,.variable=="beta_DO")
 
 
-#inididual
-ggpairs(inddatatemp, columns = c(6:10,14)) 
-ggpairs(inddatado, columns = c(6:10,14)) 
+#indvidual
+ggpairs(inddatatemp, columns = c(13,18:20,4),ggplot2::aes(color=Habitat_Broad)) 
+ggpairs(inddatado, columns = c(13,18:20,4),ggplot2::aes(color=Habitat_Broad)) 
 
 #pop
-ggpairs(popdatatemp, columns = c(6:10,13)) 
-ggpairs(popdatado, columns = c(6:10,13)) 
+ggpairs(popdatatemp, columns = c(7,12:13,16),ggplot2::aes(color=Habitat_Broad)) 
+ggpairs(popdatado, columns = c(7,12:13,16),ggplot2::aes(color=Habitat_Broad)) 
 
 #div
-ggpairs(divdatatemp, columns = c(6:10,13)) 
-ggpairs(divdatado, columns = c(6:10,13)) 
+ggpairs(divdatatemp, columns = c(7,12:13,15),ggplot2::aes(color=Habitat_Broad)) 
+ggpairs(divdatado, columns = c(7,12:13,15),ggplot2::aes(color=Habitat_Broad)) 
 
 ###Make Graphs---------------------
-
+sl2<-subset(sl,.variable==c("beta_temp","beta_DO"))
+sl2<-subset(sl2,Habitat_Broad!="Estuary")
 #scatterplot function
+
 scatter_funsl = function(x, y) {
-  ggplot(sl, aes(x = .data[[x]], y = .data[[y]]) ) +
-    geom_point() +
-    geom_smooth(method = "lm", se = TRUE, color = "grey74") +
+  ggplot(sl2, aes(x = .data[[x]], y = .data[[y]]) ) +
+    geom_point(aes(color=si)) +
+    geom_smooth(method = "lm", se = TRUE) +
     theme_cowplot()+
     ggtitle("Individual Site Level")+
-    facet_grid(~var)
+    facet_grid(~.variable+Habitat_Broad)
 }
 
 #select explanatory and response variables
-explind = names(sl)[6:10]
+explind = names(sl2)[c(13:14,18:20)]
 explind = set_names(explind)
-respind = names(sl)[c(14)]
+respind = names(sl2)[c(4)]
 respind = set_names(respind)
 
 all_plots_ind = purrr::map(respind, function(respind) {
@@ -135,3 +138,55 @@ all_plots_ind = purrr::map(respind, function(respind) {
   })
 })
 print(all_plots_ind)
+
+
+#scatterplot function pop
+cpue2<-subset(cpue,.variable==c("beta_temp","beta_DO"))
+cpue2<-subset(cpue2,Habitat_Broad!="Estuary")
+scatter_funcpue = function(x, y) {
+  ggplot(cpue2, aes(x = .data[[x]], y = .data[[y]]) ) +
+    geom_point(aes(color=si)) +
+    geom_smooth(method = "lm", se = TRUE, color = "grey74") +
+    theme_cowplot()+
+    ggtitle("CPUE Site Level")+
+    facet_grid(~.variable+Habitat_Broad)
+}
+
+#select explanatory and response variables
+explpop = names(cpue)[c(7,12:13)]
+explpop = set_names(explpop)
+resppop = names(cpue)[c(16)]
+resppop = set_names(resppop)
+
+all_plots_pop = purrr::map(resppop, function(resppop) {
+  purrr::map(explpop, function(explpop) {
+    scatter_funcpue(x = explpop, y = resppop)
+  })
+})
+print(all_plots_pop)
+
+
+
+#scatterplot function diversity
+div2<-subset(div,Habitat_Broad!="Estuary")
+scatter_fundiv = function(x, y) {
+  ggplot(div2, aes(x = .data[[x]], y = .data[[y]]) ) +
+    geom_point(aes(color=si)) +
+    geom_smooth(method = "lm", se = TRUE, color = "grey74") +
+    theme_cowplot()+
+    ggtitle("Diversity Site Level")+
+    facet_grid(~.variable)
+}
+
+#select explanatory and response variables
+explcom = names(div)[c(7,12:13)]
+explcom = set_names(explcom)
+respcom = names(div)[c(15)]
+respcom = set_names(respcom)
+
+all_plots_com = purrr::map(respcom, function(respcom) {
+  purrr::map(explcom, function(explcom) {
+    scatter_fundiv(x = explcom, y = respcom)
+  })
+})
+print(all_plots_com)

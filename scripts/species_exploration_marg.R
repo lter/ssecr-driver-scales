@@ -167,10 +167,12 @@ inddata1<-left_join(inddata1,thermdata,by="SCI_NAME")
 
 #Combine Datasets
 popdata<-merge(popdata1,speciesdata,by="SCI_NAME")
+popdata<-popdata%>% rename(Ctmax=tol)
 #remove nas
 #popdata<-subset(popdata,!is.na(popdata$Max_TL_cm))
 
 inddata<-merge(inddata1,speciesdata,by="SCI_NAME")
+inddata<-inddata%>% rename(Ctmax=tol)
 #inddata<-subset(inddata,!is.na(inddata$Max_TL_cm))
 
 
@@ -212,8 +214,8 @@ scatter_funind = function(x, y) {
     geom_point() +
     geom_smooth(method = "lm", se = TRUE) +
     theme_cowplot()+
-    ggtitle("Individual Unfiltered")+
-    facet_grid(~.variable)
+    ggtitle("Individual Species Level")+
+    facet_wrap(~factor(.variable,levels=c("beta_temp_sp","beta_DO_sp")),scales="free_y")
 }
 
 #select explanatory and response variables
@@ -228,6 +230,11 @@ all_plots_ind = purrr::map(respind, function(respind) {
   })
 })
 print(all_plots_ind)
+allplotsind<-patchwork::wrap_plots(nrow=3,plotlist=all_plots_ind[[1]])+
+  patchwork::plot_layout(guides="collect",)+ 
+  patchwork::plot_annotation(tag_levels = 'A')&
+  theme(legend.position="bottom")
+nflplotR::ggpreview(allplotsind,height=10,width=8)
 
 
 
@@ -239,8 +246,8 @@ scatter_funpop = function(x, y) {
     geom_point() +
     geom_smooth(method = "lm", se = TRUE) +
     theme_cowplot()+
-    ggtitle("Population Unfiltered")+
-    facet_wrap(~.variable,scales="free_y")
+    ggtitle("Population Species Level")+
+    facet_wrap(~factor(.variable,levels=c("beta_temp_sp","beta_DO_sp")),scales="free_y")
   
 }
 
@@ -256,7 +263,11 @@ all_plots_pop = purrr::map(resppop, function(resppop) {
   })
 })
 print(all_plots_pop)
-
+allplotspop<-patchwork::wrap_plots(nrow=3,plotlist=all_plots_pop[[1]])+
+  patchwork::plot_layout(guides="collect",)+ 
+  patchwork::plot_annotation(tag_levels = 'A')&
+  theme(legend.position="bottom")
+nflplotR::ggpreview(allplotspop,height=10,width=8)
 
 # Bayesian Correlations ---------------------------------------------------
 

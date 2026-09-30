@@ -1,42 +1,32 @@
-## Effects of Environmental Drivers Across Ecological Scales
+# Effects of Environmental Drivers Across Ecological Scales
 
-### Investigators (alphabetical listing)
-- Allison Case - Endocrine lab manager, SEZARC
-- Jeremy A. Collings - PhD candidate, University of Oregon
-- Joey Krieger Lodge - PhD student, University of Colorado, Boulder
-- Evald Maceno - PhD candidate, Univeristy of Puerto Rico, Río Piedras
-- Sierra B. Perez - PhD candidate, Indiana University
-- Bethany L. Williams - Postdoctoral fellow, University of Missouri, St. Louis
+This working group was part of the [LTER Network's](https://lternet.edu) first cohort of the [Synthesis Skills for Early Career Researchers](https://lter.github.io/ssecr/) course.
+
+### Investigators
+[Bethany L. Williams](https://orcid.org/0000-0002-0899-5132), [Jeremy A. Collings](https://orcid.org/0000-0003-0263-7171), [Allison Case](https://orcid.org/0009-0003-0413-2297), [Sierra B. Perez](https://orcid.org/0000-0002-7279-3201), [Joey Krieger Lodge](https://orcid.org/0009-0003-3296-1316), [Evald Maceno](https://orcid.org/0009-0001-2873-4466), [Zachary Feiner](https://orcid.org/0000-0001-7880-0778)
 
 ## Project Description
 
-### Motivation
-Climate change and other anthropogenic impacts are rapidly altering historic environmental conditions, with consequences across ecological scales. For example, at the individual level, reduced body size is suggested to be a “universal response to climate change” across organisms (Gardener et al., 2011); although body size reductions cannot always be assumed (Sheridan & Bickford, 2011). Similarly, across organisms and ecosystems, declining population sizes and diversity loss are well appreciated. However, global change impacts are typically evaluated at each ecological scale independently. Understanding how global change responses at one ecological level may mediate dynamics at another is essential for accurately predicting global change impacts. Functional traits (traits related to an organism's performance or fitness), like body size, provide a mechanistic link for evaluating how individual-level responses impact higher levels of organization (Violle et al., 2007; Villéger et al., 2017). 
-
-Moreover, the effects of single global changes are generally studied independently, despite global changes occuring simultaneously. In fish ecology, for instance, warming effects have received far more attention than other climatic stressors, like hypoxia (i.e., low dissolved oxygen (DO)), and studies rarely link multiple climatic factors (Nagelkerken et al., 2023). As coupled global change factors may amplify ecological impacts, it is crucial consider them within the context of their co-occurrence. 
-
-### Questions
-We are leveraging long-term (5+ year) datasets across aquatic ecosystems in the LTER Network, NEON, and California's Interagency Ecological Program. These records directly capture changes in environmental drivers (temperature & DO), and fish body size, population abundances, and community properties, and we are using them to explore the following:
-
-<ol type="1">
-  <li>Across aquatic systems, how are global change factors (temperature & DO) impacting fish individuals, populations & communities? </li>
-  <li>Are effects consistent/scaling across ecological levels of complexity (individual, population, community)? </li>
-  <li>Does variation in responses at one ecological level (i.e., intra-/interspecific variation) explain responses at higher levels of organization? </li>
-  <li>Do patterns differ across marine and freshwater ecosystems? </li>
-</ol>
-<p align="center">
-<img src="conceptual fig.png" alt="Project conceptual figure" width="65%"/>
-</p>
-
-### Approach
-To estimate the effects of temperature and DO on fish individuals, populations, and communities, we are fitting hierarchical linear models with one model per each of the following scaled response variables: body size (individual-level), standardized catch per species (population-level), species diversity (community-level), and standardized catch across species (community-level). Assuming a sufficiently weak correlation between temperature and DO, we will include both variables as fixed effects in each of our four models. Additionally, each model will include spatial random intercepts to account for other sources of meaningful environmental variation among sites. Our individual and population level models will also include random slopes for species to estimate interspecific variation in temperature and DO effects. Finally, each of these models will be fit with data from either freshwater or marine sites, resulting in eight models in total. 
-<br>
-<br>
-We will use estimates of temperature and DO effects to evaluate Question 1. Comparisons between slope parameters across our individual, population, and community-level models will be used to evaluate Question 2. For Question 3, we will compare the variation in environmental driver effects at one ecological level with the magnitude of those effects at the next higher level. Finally, each of these heuristics will be performed for freshwater and marine systems, and a comparison of conclusions made across these two ecosystems will be used to evaluate Question 4. 
+Global changes are affecting organisms across ecological scales, but we often lack baseline knowledge of how responses at one scale correspond with unmeasured effects at other scales. To complicate matters further, global change stressors do not act in isolation and interactions between stressors may be unpredictable. While challenging, studies that consider both multiple scales and multiple stressors are necessary to develop a realistic understanding of systems' sensitivity to global change. Aquatic ecosystems are faced with various potentially interactive stressors like rising temperatures and hypoxia. These stressors are associated with negative effects on fishes at different ecological scales, though results are not always uniform. We synthesized long-term (≥ 5 yr) datasets to test the effects of temperature, dissolved oxygen (DO), and their interaction on body size, population abundance, and community diversity of fishes across the continental United States. This study provides baselines expectations of how temperature and DO individually and interactively impact North American fishes across scales in the era of global change. 
 
 ## Script Explanations
 
-Intermediate_scripts folder: There is one R script per site that is used to download, combine, and harmonize the relevant fish and environmental dataset(s) from EDI. The 01_intermediate_harmonize script is then used to combine all the datasets from each site.
+`scripts/intermediate_scripts/`
+  - `00_intermediate_LTER_NTL.R`: Downloads/harmonizes datasets for Northern Temperate Lakes LTER
+  - `00_intermediate_LTER_SBC.R`: Downloads/harmonizes datasets for Santa Barbara Coastal LTER
+  - `00_intermediate_LTER_VCR.R`: Downloads/harmonizes datasets for Virginia Coastal Reserve LTER
+  - `00_intermediate_NEON_ARIK.R`: Downloads/harmonizes datasets for Arikaee River NEON site
+  - `00_intermediate_NEON_HOPB.R`: Downloads/harmonizes datasets for Lower Hop Brook NEON site
+  - `00_intermediate_NEON_LEWI.R`: Downloads/harmonizes datasets for Lewis Run NEON site
+  - `00_intermediate_NEON_MAYF.R`: Downloads/harmonizes datasets for Mayfield Creek NEON site
+  - `00_intermediate_NEON_MCDI.R`: Downloads/harmonizes datasets for McDiffett Creek NEON site
+  - `00_intermediate_NEON_POSE.R`: Downloads/harmonizes datasets for Posey Creek NEON site
+  - `00_intermediate_NEON_PRIN.R`: Downloads/harmonizes datasets for Pringle Creek NEON site
+  - `00_intermediate_NEON_WALK.R`: Downloads/harmonizes datasets for Walker Branch NEON site
+  - `00_intermediate_NPS_HTLN.R`: Downloads/harmonizes datasets for National Park Service Heartland Inventory & Monitoring Network sites
+  - `00_intermediate_UCD_SUMA.R`: Downloads/harmonizes datasets for University of California, Davis Suisun Marsh site
+  - `00_intermediate_USGS_ERIE.R`: Downloads/harmonizes datasets for USGS Lake Erie sites
+  - `01_intermediate_harmonize.R`: Combines cleaned datasets from across all sites
 
 
 ## Supplementary Resources

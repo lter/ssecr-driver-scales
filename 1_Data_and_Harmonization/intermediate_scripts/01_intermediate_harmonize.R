@@ -18,10 +18,10 @@ librarian::shelf(supportR, tidyverse, summarytools,
                  cowplot, gt, corrplot,
                  vegan, neonUtilities, ggcorrplot, emmeans, ggpubr, gridExtra)
 
-source(file = file.path("scripts",
+source(file = file.path("1_Data_and_Harmonization",
                         "functions.R"))
 
-source(file = file.path("scripts",
+source(file = file.path("4_Miscellaneous",
                         "viz_ideas.R"))
 
 ## LOAD DATA ----
@@ -1853,6 +1853,11 @@ final_harmonized %>%
 
 final_harmonized <- final_harmonized %>% 
   filter(SITE != "IEP_YOLO")
+
+#also rip the MCR sites - must have dropped after for the models? 
+
+final_harmonized <- final_harmonized %>% 
+  filter(SITE != "LTER_MCR")
 
 #save as Rds to use in model scripts and PDF viz
 
